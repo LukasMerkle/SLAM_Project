@@ -1,18 +1,10 @@
-# !/usr/bin/python
-#
-# Example code to go through the velodyne_hits.bin
-# file and read timestamps, number of hits, and the
-# hits in each packet.
-#
-#
-# To call:
-#
-#   python read_vel_hits.py velodyne.bin
-#
-
 import sys
 import struct
-
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+import numpy as np
+import os
+import open3d as o3d
 def convert(x_s, y_s, z_s):
 
     scaling = 0.005 # 5 mm
@@ -24,65 +16,40 @@ def convert(x_s, y_s, z_s):
 
     return x, y, z
 
-def verify_magic(s):
-
-    magic = 44444
-
-    m = struct.unpack('<HHHH', s)
-
-    return len(m)>=4 and m[0] == magic and m[1] == magic and m[2] == magic and m[3] == magic
-
 def main(args):
+    for f in os.listdir(sys.argv[1]):
+        f_bin = open(sys.argv[1]+f, "rb")
 
-    if len(sys.argv) < 2:
-        print "Please specifiy input bin file"
-        return 1
+        hits = []
 
-    f_bin = open(sys.argv[1], "r")
+        while True:    
+            x_str = f_bin.read(2)
+            if x_str == b'': # eof
+                break
 
-    total_hits = 0
-    first_utime = -1
-    last_utime = -1
-
-    while True:
-
-        magic = f_bin.read(8)
-        if magic == '': # eof
-            break
-
-        if not verify_magic(magic):
-            print "Could not verify magic"
-
-        num_hits = struct.unpack('<I', f_bin.read(4))[0]
-        utime = struct.unpack('<Q', f_bin.read(8))[0]
-
-        padding = f_bin.read(4) # padding
-
-        print "Have %d hits for utime %ld" % (num_hits, utime)
-
-        total_hits += num_hits
-        if first_utime == -1:
-            first_utime = utime
-        last_utime = utime
-
-        for i in range(num_hits):
-
-            x = struct.unpack('<H', f_bin.read(2))[0]
+            x = struct.unpack('<H', x_str)[0]
             y = struct.unpack('<H', f_bin.read(2))[0]
             z = struct.unpack('<H', f_bin.read(2))[0]
             i = struct.unpack('B', f_bin.read(1))[0]
             l = struct.unpack('B', f_bin.read(1))[0]
 
             x, y, z = convert(x, y, z)
+
             s = "%5.3f, %5.3f, %5.3f, %d, %d" % (x, y, z, i, l)
 
-            print s
+            hits += [[x, y, z]]
 
-        raw_input("Press enter to continue...")
+        f_bin.close()
 
-    f_bin.close()
+        hits = np.asarray(hits)
 
-    print "Read %d total hits from %ld to %ld" % (total_hits, first_utime, last_utime)
+        # fig = plt.figure()
+        # ax = fig.add_subplot(111, projection='3d')
+        # ax.scatter(hits[:, 0], hits[:, 1], -hits[:, 2], c=-hits[:, 2], s=5, linewidths=0)
+        # plt.show()
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(hits)
+        o3d.visualization.draw_geometries([pcd])
 
     return 0
 
