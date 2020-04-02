@@ -7,25 +7,36 @@ import numpy as np
 import os
 import open3d as o3d
 def evaluate_smoothness_scanline(scanline,k_points):
+    n_plane_points = 4
+    n_edge_points = 2
+    smoothness_thresh = 0.1
     smoothness_all = np.zeros((0,4))
     for i in range(k_points,scanline.shape[0]-k_points):
+        if not evaluate_patch(scanline[i-k_points:i+k_points+1]):
+            continue
         diffs = np.vstack((scanline[i] - scanline[i-k_points:i],
                         scanline[i] - scanline[i+1:i+k_points+1]))
         norm = np.linalg.norm(diffs)
         smoothness = norm/(k_points*2*np.linalg.norm(scanline[i]))
+        smoothness_all = np.vstack((smoothness_all,np.array([smoothness,*scanline[i]])))
 
+    sorted_points = smoothness_all[smoothness_all[:,0].argsort()]
+    plane_points = sorted_points[:n_plane_points]
+    plane_points = plane_points[np.where(plane_points[:,0]<smoothness_thresh)[0]][:,1:]
 
-    #         # smoothness_all = np.vstack((smoothness_all,np.stack((smoothness,scanline[i]))))
-    # sorted = smoothness_all[smoothness_all[:,0].argsort()]
-    print(sorted)
+    edge_points = sorted_points[-n_edge_points:]
+    edge_points = edge_points[np.where(edge_points[:,0]>smoothness_thresh)[0]][:,1:]
+
+    return plane_points,edge_points
 
 def evaluate_smoothness_entire_poundcloud(cloud):
     k_points = 5
+    k_regions = 6
     scan_lines = np.unique(cloud[:,-1])
     for scan_line in scan_lines:
-        current_scan_line_points = cloud[np.where(cloud[:,-1] == scan_line)[0],:3]
-        evaluate_smoothness_scanline(current_scan_line_points,k_points)
-        
+        for k in range(k_regions):
+            current_scan_line_points = cloud[np.where(cloud[:,-1] == scan_line)[0],:3]
+            plane_points,edge_points = evaluate_smoothness_scanline(current_scan_line_points,k_points)        
 
 def convert(x_s, y_s, z_s):
 
