@@ -6,6 +6,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import os
 import open3d as o3d
+
 def evaluate_smoothness_scanline(scanline,k_points):
     smoothness_all = np.zeros((0,4))
     for i in range(k_points,scanline.shape[0]-k_points):
@@ -26,6 +27,18 @@ def evaluate_smoothness_entire_poundcloud(cloud):
         current_scan_line_points = cloud[np.where(cloud[:,-1] == scan_line)[0],:3]
         evaluate_smoothness_scanline(current_scan_line_points,k_points)
         
+def evaluate_patch(patch,feature_index):
+    if np.any(patch[2,:] < patch[2,feature_index]):
+        return False
+    else:
+        rand_index = np.random.randint(patch.shape[0],3)
+        v1 = patch[rand_index[1],:] - patch[rand_index[0],:]
+        v2 = patch[rand_index[2],:] - patch[rand_index[0],:]
+        cp = np.cross(v1, v2)
+        if (np.dot(cp,patch[feature_index,:]) < 0.0002):
+            return False
+        else:
+            return True
 
 def convert(x_s, y_s, z_s):
 
