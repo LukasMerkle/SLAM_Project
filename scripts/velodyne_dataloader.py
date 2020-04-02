@@ -34,10 +34,15 @@ def evaluate_smoothness_scanline(scanline,k_points):
 def evaluate_smoothness_entire_poundcloud(cloud):
     k_points = 5
     k_regions = 6
+    all_plane_points = np.zeros((0,3))
+    all_edge_points = np.zeros((0,3))
     scan_lines = np.unique(cloud[:,-1])
     for scan_line in scan_lines:
         current_scan_line_points = cloud[np.where(cloud[:,-1] == scan_line)[0],:3]
         plane_points,edge_points = evaluate_smoothness_scanline(current_scan_line_points,k_points)
+        all_plane_points = np.vstack((all_plane_points,plane_points))
+        all_edge_points = np.vstack((all_edge_points,edge_points))
+    return all_plane_points, all_edge_points
 
 def evaluate_patch(patch,feature_index):
     if np.any(np.linalg.norm(patch[:,2]) < np.linalg.norm(patch[feature_index,2])):
@@ -61,10 +66,25 @@ def convert(x_s, y_s, z_s):
 
     return x, y, z
 
-def visualize_poindcloud(cloud):
+def visualize_poindcloud(cloud,color=[1,1,1]):
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(cloud[:,:3])
     o3d.visualization.draw_geometries([pcd])
+
+def visualize_edge_and_planes(edge_points,plane_points,cloud):
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(cloud[:,:3])
+    pcd.paint_uniform_color([1,1,0])
+
+    pcd_edge = o3d.geometry.PointCloud()
+    pcd_edge.points = o3d.utility.Vector3dVector(edge_points)
+    pcd_edge.paint_uniform_color([0,0,0])
+
+    pcd_plane = o3d.geometry.PointCloud()
+    pcd_plane.points = o3d.utility.Vector3dVector(plane_points)
+    pcd_plane.paint_uniform_color([0,0,0.5])
+
+    o3d.visualization.draw_geometries([pcd,pcd_edge,pcd_plane])
 
 def load_velodyne_timestep(f_bin):
     hits = []
@@ -94,8 +114,9 @@ def main(args):
     for f in os.listdir(sys.argv[1]):
         f_bin = open(sys.argv[1]+f, "rb")
         cloud = load_velodyne_timestep(f_bin)
-        # visualize_poindcloud(cloud)
-        evaluate_smoothness_entire_poundcloud(cloud)
+        all_plane_points, all_edge_points = evaluate_smoothness_entire_poundcloud(cloud)
+        visualize_edge_and_planes(all_edge_points, all_plane_points,cloud)
+
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
