@@ -6,6 +6,26 @@ from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import os
 import open3d as o3d
+def evaluate_smoothness_scanline(scanline,k_points):
+    smoothness_all = np.zeros((0,4))
+    for i in range(k_points,scanline.shape[0]-k_points):
+        diffs = np.vstack((scanline[i] - scanline[i-k_points:i],
+                        scanline[i] - scanline[i+1:i+k_points+1]))
+        norm = np.linalg.norm(diffs)
+        smoothness = norm/(k_points*2*np.linalg.norm(scanline[i]))
+
+
+    #         # smoothness_all = np.vstack((smoothness_all,np.stack((smoothness,scanline[i]))))
+    # sorted = smoothness_all[smoothness_all[:,0].argsort()]
+    print(sorted)
+
+def evaluate_smoothness_entire_poundcloud(cloud):
+    k_points = 5
+    scan_lines = np.unique(cloud[:,-1])
+    for scan_line in scan_lines:
+        current_scan_line_points = cloud[np.where(cloud[:,-1] == scan_line)[0],:3]
+        evaluate_smoothness_scanline(current_scan_line_points,k_points)
+        
 
 def convert(x_s, y_s, z_s):
 
@@ -20,7 +40,7 @@ def convert(x_s, y_s, z_s):
 
 def visualize_poindcloud(cloud):
     pcd = o3d.geometry.PointCloud()
-    pcd.points = o3d.utility.Vector3dVector(cloud)
+    pcd.points = o3d.utility.Vector3dVector(cloud[:,:3])
     o3d.visualization.draw_geometries([pcd])
 
 def load_velodyne_timestep(f_bin):
@@ -40,8 +60,7 @@ def load_velodyne_timestep(f_bin):
         x, y, z = convert(x, y, z)
 
         s = "%5.3f, %5.3f, %5.3f, %d, %d" % (x, y, z, i, l)
-
-        hits += [[x, y, z]]
+        hits += [[x, y, z,l]]
 
     f_bin.close()
 
@@ -52,7 +71,8 @@ def main(args):
     for f in os.listdir(sys.argv[1]):
         f_bin = open(sys.argv[1]+f, "rb")
         cloud = load_velodyne_timestep(f_bin)
-        visualize_poindcloud(cloud)
+        # visualize_poindcloud(cloud)
+        evaluate_smoothness_entire_poundcloud(cloud)
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
