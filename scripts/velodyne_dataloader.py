@@ -6,14 +6,16 @@ from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import os
 import open3d as o3d
+
 def evaluate_smoothness_scanline(scanline,k_points):
     n_plane_points = 4
     n_edge_points = 2
     smoothness_thresh = 0.1
     smoothness_all = np.zeros((0,4))
     for i in range(k_points,scanline.shape[0]-k_points):
-        if not evaluate_patch(scanline[i-k_points:i+k_points+1]):
+        if not evaluate_patch(scanline[i-k_points:i+k_points+1],k_points):
             continue
+
         diffs = np.vstack((scanline[i] - scanline[i-k_points:i],
                         scanline[i] - scanline[i+1:i+k_points+1]))
         norm = np.linalg.norm(diffs)
@@ -34,9 +36,19 @@ def evaluate_smoothness_entire_poundcloud(cloud):
     k_regions = 6
     scan_lines = np.unique(cloud[:,-1])
     for scan_line in scan_lines:
-        for k in range(k_regions):
-            current_scan_line_points = cloud[np.where(cloud[:,-1] == scan_line)[0],:3]
-            plane_points,edge_points = evaluate_smoothness_scanline(current_scan_line_points,k_points)        
+        current_scan_line_points = cloud[np.where(cloud[:,-1] == scan_line)[0],:3]
+        plane_points,edge_points = evaluate_smoothness_scanline(current_scan_line_points,k_points)
+
+def evaluate_patch(patch,feature_index):
+    if np.any(np.linalg.norm(patch[:,2]) < np.linalg.norm(patch[feature_index,2])):
+        return False
+    rand_index = np.random.randint(0,patch.shape[0],3)
+    v1 = patch[rand_index[1],:] - patch[rand_index[0],:]
+    v2 = patch[rand_index[2],:] - patch[rand_index[0],:]
+    cp = np.cross(v1, v2)
+    if (np.dot(cp,patch[feature_index,:]) < 0.0002):
+        return False
+    return True
 
 def convert(x_s, y_s, z_s):
 
