@@ -126,8 +126,8 @@ def main(args):
             continue
         f_bin = open(sys.argv[1]+f, "rb")
         cloud = load_velodyne_timestep(f_bin)
-    # pcd = o3d.io.read_point_cloud("/home/lmerkle/Downloads/dataset-geometry-only-pc/stimuli/cube_D01_L01.ply")
-    # cloud = np.asarray(pcd.points)
+        # pcd = o3d.io.read_point_cloud("/home/lmerkle/Downloads/dataset-geometry-only-pc/stimuli/cube_D01_L01.ply")
+        # cloud = np.asarray(pcd.points)
         all_plane_points, all_edge_points = feature_extractor.evaluate_smoothness_entire_poundcloud(cloud)
         feature_extractor.visualize_edge_and_planes(all_edge_points, all_plane_points,cloud)
 
