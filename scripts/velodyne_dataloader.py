@@ -39,9 +39,11 @@ def evaluate_smoothness_entire_poundcloud(cloud):
     scan_lines = np.unique(cloud[:,-1])
     for scan_line in scan_lines:
         current_scan_line_points = cloud[np.where(cloud[:,-1] == scan_line)[0],:3]
-        plane_points,edge_points = evaluate_smoothness_scanline(current_scan_line_points,k_points)
-        all_plane_points = np.vstack((all_plane_points,plane_points))
-        all_edge_points = np.vstack((all_edge_points,edge_points))
+        scan_points_regions = np.array_split(current_scan_line_points,k_regions)
+        for region_scan_lines in scan_points_regions:
+            plane_points,edge_points = evaluate_smoothness_scanline(region_scan_lines,k_points)
+            all_plane_points = np.vstack((all_plane_points,plane_points))
+            all_edge_points = np.vstack((all_edge_points,edge_points))
     return all_plane_points, all_edge_points
 
 def evaluate_patch(patch,feature_index):
@@ -56,7 +58,6 @@ def evaluate_patch(patch,feature_index):
     return True
 
 def convert(x_s, y_s, z_s):
-
     scaling = 0.005 # 5 mm
     offset = -100.0
 
@@ -66,7 +67,7 @@ def convert(x_s, y_s, z_s):
 
     return x, y, z
 
-def visualize_poindcloud(cloud,color=[1,1,1]):
+def visualize_poindcloud(cloud):
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(cloud[:,:3])
     o3d.visualization.draw_geometries([pcd])
