@@ -17,12 +17,12 @@ class FeatureExtracter():
     def evaluate_smoothness_scanline(self,scanline):
         smoothness_all = np.zeros((0,4))
         for i in range(self.k_points,scanline.shape[0]-self.k_points):
-            if not self.evaluate_patch(scanline[i-self.k_points:i+self.k_points+1],self.k_points):
+            neighbor_points = scanline[i-self.k_points:i+self.k_points+1]
+            if not self.evaluate_patch(neighbor_points,self.k_points):
                 continue
 
-            diffs = np.vstack((scanline[i] - scanline[i-self.k_points:i],
-                            scanline[i] - scanline[i+1:i+self.k_points+1]))
-            norm = np.linalg.norm(diffs)
+            diffs = scanline[i] - neighbor_points
+            norm = np.linalg.norm(np.sum(diffs,axis=0))
             smoothness = norm/(self.k_points*2*np.linalg.norm(scanline[i]))
             smoothness_all = np.vstack((smoothness_all,np.array([smoothness,*scanline[i]])))
 
@@ -76,11 +76,14 @@ class FeatureExtracter():
         pcd_plane.points = o3d.utility.Vector3dVector(plane_points)
         pcd_plane.paint_uniform_color([0,1,0])
 
+        pcd_origin = o3d.geometry.PointCloud()
+        pcd_origin.points = o3d.utility.Vector3dVector(np.zeros((1,3)))
+        pcd_origin.paint_uniform_color([0,0,1])
         print(cloud.shape,'total points')
         print(edge_points.shape,'Edge points')
         print(plane_points.shape,'plane point')
 
-        o3d.visualization.draw_geometries([pcd,pcd_plane,pcd_edge])
+        o3d.visualization.draw_geometries([pcd,pcd_plane,pcd_edge,pcd_origin])
 
 def convert(x_s, y_s, z_s):
     scaling = 0.005 # 5 mm
@@ -123,6 +126,8 @@ def main(args):
             continue
         f_bin = open(sys.argv[1]+f, "rb")
         cloud = load_velodyne_timestep(f_bin)
+    # pcd = o3d.io.read_point_cloud("/home/lmerkle/Downloads/dataset-geometry-only-pc/stimuli/cube_D01_L01.ply")
+    # cloud = np.asarray(pcd.points)
         all_plane_points, all_edge_points = feature_extractor.evaluate_smoothness_entire_poundcloud(cloud)
         feature_extractor.visualize_edge_and_planes(all_edge_points, all_plane_points,cloud)
 
