@@ -6,6 +6,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import os
 import open3d as o3d
+from open3d.open3d.geometry import voxel_down_sample
 class FeatureExtracter():
     def __init__(self):
         self.n_plane_points = 4
@@ -20,7 +21,6 @@ class FeatureExtracter():
             neighbor_points = scanline[i-self.k_points:i+self.k_points+1]
             if not self.evaluate_patch(neighbor_points,self.k_points):
                 continue
-
             diffs = scanline[i] - neighbor_points
             norm = np.linalg.norm(np.sum(diffs,axis=0))
             smoothness = norm/(self.k_points*2*np.linalg.norm(scanline[i]))
@@ -48,7 +48,9 @@ class FeatureExtracter():
         return all_plane_points, all_edge_points
 
     def evaluate_patch(self,patch,feature_index):
-        if np.any(np.linalg.norm(patch[:,2]) < np.linalg.norm(patch[feature_index,2])):
+        dist_points = np.linalg.norm(patch,axis=1)
+        dist_feature = np.linalg.norm(patch[feature_index,:])
+        if np.any(np.abs(dist_points - dist_feature) > 0.5) and np.any(dist_points < dist_feature):
             return False
         rand_index = np.random.randint(0,patch.shape[0],3)
         v1 = patch[rand_index[1],:] - patch[rand_index[0],:]
@@ -66,24 +68,25 @@ class FeatureExtracter():
     def visualize_edge_and_planes(self,edge_points,plane_points,cloud):
         pcd = o3d.geometry.PointCloud()
         pcd.points = o3d.utility.Vector3dVector(cloud[:,:3])
-        pcd.paint_uniform_color([1,1,0])
+        downpcd = voxel_down_sample(pcd,voxel_size=.5)
+        downpcd.paint_uniform_color([1,1,0])
 
         pcd_edge = o3d.geometry.PointCloud()
         pcd_edge.points = o3d.utility.Vector3dVector(edge_points)
-        pcd_edge.paint_uniform_color([1,0,0])
+        pcd_edge.paint_uniform_color([0,0,0])
 
         pcd_plane = o3d.geometry.PointCloud()
-        pcd_plane.points = o3d.utility.Vector3dVector(plane_points)
-        pcd_plane.paint_uniform_color([0,1,0])
+        # pcd_plane.points = o3d.utility.Vector3dVector(plane_points)
+        pcd_plane.paint_uniform_color([1,0,0])
 
         pcd_origin = o3d.geometry.PointCloud()
-        pcd_origin.points = o3d.utility.Vector3dVector(np.zeros((1,3)))
+        # pcd_origin.points = o3d.utility.Vector3dVector(np.zeros((1,3)))
         pcd_origin.paint_uniform_color([0,0,1])
         print(cloud.shape,'total points')
         print(edge_points.shape,'Edge points')
         print(plane_points.shape,'plane point')
 
-        o3d.visualization.draw_geometries([pcd,pcd_plane,pcd_edge,pcd_origin])
+        o3d.visualization.draw_geometries([downpcd,pcd_edge,pcd_plane,pcd_origin])
 
 def convert(x_s, y_s, z_s):
     scaling = 0.005 # 5 mm
@@ -122,7 +125,7 @@ def load_velodyne_timestep(f_bin):
 def main(args):
     feature_extractor = FeatureExtracter()
     for i,f in enumerate(os.listdir(sys.argv[1])):
-        if i < 8000:
+        if i < 1002:
             continue
         f_bin = open(sys.argv[1]+f, "rb")
         cloud = load_velodyne_timestep(f_bin)
