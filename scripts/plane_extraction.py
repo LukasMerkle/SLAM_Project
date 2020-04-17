@@ -14,17 +14,18 @@ class PlaneExtracter():
         cloud_open3d= o3d.geometry.PointCloud()
         cloud_open3d.points = o3d.utility.Vector3dVector(cloud[:,:3])
 
-        ground_plane_open3d = cloud_open3d.segment_plane(0.01,3000,1000)
+        ground_plane_open3d = cloud_open3d.segment_plane(0.3,1000,1000)
 
         exluded_ground_points= o3d.geometry.PointCloud()
         exluded_ground_points.points = o3d.utility.Vector3dVector(cloud[~np.isin(np.arange(cloud.shape[0]),ground_plane_open3d[1]),:3])
         
-        new_plane_open3d = exluded_ground_points.segment_plane(0.01,10,1000)
+        new_plane_open3d = exluded_ground_points.segment_plane(0.3,100,1000)
         new_plane_open3d_for_vis= o3d.geometry.PointCloud()
+        
         temp_cloud = cloud[~np.isin(np.arange(cloud.shape[0]),ground_plane_open3d[1]),:3]
         new_plane_open3d_for_vis.points = o3d.utility.Vector3dVector(temp_cloud[new_plane_open3d[1],:3])
 
-        self.visualize_poindcloud_and_plane(exluded_ground_points,new_plane_open3d_for_vis)
+        self.visualize_poindcloud_and_plane(cloud_open3d,new_plane_open3d_for_vis)
 
     def visualize_poindcloud_and_plane(self,pcd,plane):
         pcd.paint_uniform_color([1,1,0])
@@ -72,9 +73,9 @@ def main(args):
         if i < 1002:
             continue
         f_bin = open(sys.argv[1]+f, "rb")
-        # cloud = load_velodyne_timestep(f_bin)
-        pcd = o3d.io.read_point_cloud("/home/lmerkle/Downloads/dataset-geometry-only-pc/stimuli/cube_D01_L01.ply")
-        cloud = np.asarray(pcd.points)
+        cloud = load_velodyne_timestep(f_bin)
+        # pcd = o3d.io.read_point_cloud("/home/lmerkle/Downloads/dataset-geometry-only-pc/stimuli/cube_D01_L01.ply")
+        # cloud = np.asarray(pcd.points)
         plane_extractor = PlaneExtracter()
         plane_extractor.extract_planes(cloud)
 
