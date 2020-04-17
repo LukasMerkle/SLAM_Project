@@ -8,27 +8,33 @@ import os
 import open3d as o3d
 
 class PlaneExtracter():
-    # def __init__(self):
+    def __init__(self):
+        self.min_dist = 0.2
+        self.min_number_of_points = 1000
+        self.num_iter = 1000
 
     def extract_planes(self,cloud):
         cloud_open3d= o3d.geometry.PointCloud()
         cloud_open3d.points = o3d.utility.Vector3dVector(cloud[:,:3])
-
-        ground_plane_open3d = cloud_open3d.segment_plane(0.3,1000,1000)
-
-        exluded_ground_points= o3d.geometry.PointCloud()
-        exluded_ground_points.points = o3d.utility.Vector3dVector(cloud[~np.isin(np.arange(cloud.shape[0]),ground_plane_open3d[1]),:3])
+        cloud_open3d.paint_uniform_color([1,1,0])
+        cloud_numpy = cloud[:,:3]
+        pointcloud_list = []
+        number_of_planes = 10
         
-        new_plane_open3d = exluded_ground_points.segment_plane(0.3,100,1000)
-        new_plane_open3d_for_vis= o3d.geometry.PointCloud()
-        
-        temp_cloud = cloud[~np.isin(np.arange(cloud.shape[0]),ground_plane_open3d[1]),:3]
-        new_plane_open3d_for_vis.points = o3d.utility.Vector3dVector(temp_cloud[new_plane_open3d[1],:3])
+        for i in range(number_of_planes):
+            plane = cloud_open3d.segment_plane(self.min_dist,self.min_number_of_points,self.num_iter)
+            
+            plane_pointcloud = o3d.geometry.PointCloud()
+            plane_pointcloud.points = o3d.utility.Vector3dVector(cloud_numpy[plane[1],:3])
+            plane_pointcloud.paint_uniform_color(np.random.rand(3))
+            pointcloud_list.append(plane_pointcloud)
+            
+            cloud_numpy = cloud_numpy[~np.isin(np.arange(cloud_numpy.shape[0]),plane[1]),:3]
+            cloud_open3d.points = o3d.utility.Vector3dVector(cloud_numpy)
 
-        self.visualize_poindcloud_and_plane(cloud_open3d,new_plane_open3d_for_vis)
+        o3d.visualization.draw_geometries(pointcloud_list)
 
     def visualize_poindcloud_and_plane(self,pcd,plane):
-        pcd.paint_uniform_color([1,1,0])
         all_points = [pcd]
         all_points.append(plane.paint_uniform_color([1,0,1]))
         o3d.visualization.draw_geometries(all_points)
@@ -69,11 +75,24 @@ def load_velodyne_timestep(f_bin):
 
 def main(args):
     feature_extractor = PlaneExtracter()
-    for i,f in enumerate(os.listdir(sys.argv[1])):
-        if i < 1002:
+    file_name_list = []
+    for f in os.listdir(sys.argv[1]):
+        file_name_list.append(int(f[:-4]))
+    sorted_path_list = sorted(file_name_list)
+
+    if len(sys.argv) is 3:
+        start_at_desired_frame = True
+        desired_time_stamp = int(sys.argv[2])
+        print("starting at desired time stamp\n")
+    else: start_at_desired_frame = False
+
+    for i,f in enumerate(sorted_path_list):
+        if start_at_desired_frame is True and f-desired_time_stamp  is not 0 and i <100:
             continue
-        f_bin = open(sys.argv[1]+f, "rb")
+        start_at_desired_frame = False
+        f_bin = open(sys.argv[1]+str(f)+".bin", "rb")
         cloud = load_velodyne_timestep(f_bin)
+        print(f)
         # pcd = o3d.io.read_point_cloud("/home/lmerkle/Downloads/dataset-geometry-only-pc/stimuli/cube_D01_L01.ply")
         # cloud = np.asarray(pcd.points)
         plane_extractor = PlaneExtracter()
