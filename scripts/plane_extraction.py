@@ -16,10 +16,10 @@ class PlaneExtracter():
     def extract_planes(self,cloud):
         cloud_open3d= o3d.geometry.PointCloud()
         cloud_open3d.points = o3d.utility.Vector3dVector(cloud[:,:3])
-        cloud_open3d.paint_uniform_color([1,1,0])
+        cloud_open3d.paint_uniform_color([1,0,0])
         cloud_numpy = cloud[:,:3]
         pointcloud_list = []
-        number_of_planes = 10
+        number_of_planes = 4
         
         for i in range(number_of_planes):
             plane = cloud_open3d.segment_plane(self.min_dist,self.min_number_of_points,self.num_iter)
@@ -27,8 +27,9 @@ class PlaneExtracter():
             plane_pointcloud = o3d.geometry.PointCloud()
             plane_pointcloud.points = o3d.utility.Vector3dVector(cloud_numpy[plane[1],:3])
             plane_pointcloud.paint_uniform_color(np.random.rand(3))
-            pointcloud_list.append(plane_pointcloud)
-            
+            if np.abs(np.dot(plane[0][:3],np.array([0,1,0])))>0.02:
+                #check if ground plane by checking dot product with [0,1,0] and exlude it
+                pointcloud_list.append(plane_pointcloud)
             cloud_numpy = cloud_numpy[~np.isin(np.arange(cloud_numpy.shape[0]),plane[1]),:3]
             cloud_open3d.points = o3d.utility.Vector3dVector(cloud_numpy)
 
@@ -74,6 +75,7 @@ def load_velodyne_timestep(f_bin):
     return hits
 
 def main(args):
+    #good frame 1335705713193323
     feature_extractor = PlaneExtracter()
     file_name_list = []
     for f in os.listdir(sys.argv[1]):
@@ -87,7 +89,7 @@ def main(args):
     else: start_at_desired_frame = False
 
     for i,f in enumerate(sorted_path_list):
-        if start_at_desired_frame is True and f-desired_time_stamp  is not 0 and i <100:
+        if start_at_desired_frame is True and f-desired_time_stamp < 0:
             continue
         start_at_desired_frame = False
         f_bin = open(sys.argv[1]+str(f)+".bin", "rb")
