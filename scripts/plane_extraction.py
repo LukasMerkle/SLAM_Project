@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import os
+import copy
 import open3d as o3d
 
 class PlaneExtracter():
@@ -36,9 +37,9 @@ class PlaneExtracter():
         # o3d.visualization.draw_geometries(pointcloud_list)
 
     def visualize_poindclouds(self,pcd1,pcd2):
-        pcd1.paint_uniform_color([1,0,1])
-        pcd2.paint_uniform_color([0,1,1])
-        all_points = [pcd1,pcd2]
+        pcd1.paint_uniform_color([1,0,0])
+        pcd2.paint_uniform_color([0,1,0])
+        all_points = [pcd2,pcd1]
         o3d.visualization.draw_geometries(all_points)
 
 def convert(x_s, y_s, z_s):
@@ -112,11 +113,18 @@ def main(args):
             cloud_open3d_2= o3d.geometry.PointCloud()
             cloud_open3d_2.points = o3d.utility.Vector3dVector(planes_all[1])
             reg_p2l = o3d.registration.registration_icp(cloud_open3d_1, cloud_open3d_2, 0.02, np.eye(4),o3d.registration.TransformationEstimationPointToPoint())
-            transformation =  transformation @ np.linalg.inv(np.array(reg_p2l.transformation))
+            transformation = transformation @np.linalg.inv( np.array(reg_p2l.transformation))
             del planes_all[0]
-            if f-desired_time_stamp > 0.01*10**6:
+            if f-desired_time_stamp > 1*10**6:
                 print(transformation)
-                transformed_point_cloud = first_cloud_open3d.transform(transformation)
+                transformed_point_cloud = copy.deepcopy(first_cloud_open3d)
+                transformed_point_cloud.transform(transformation)
+                
+                artificial_transform = np.eye(4)
+                artificial_transform[:3,-1] = np.array([10,10,1])
+                transformed_point_cloud2 = copy.deepcopy(first_cloud_open3d)
+                transformed_point_cloud2.transform(artificial_transform)
+
                 plane_extractor.visualize_poindclouds(transformed_point_cloud,cloud_open3d_2)
 
 
