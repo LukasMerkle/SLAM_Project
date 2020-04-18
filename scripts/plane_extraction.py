@@ -21,7 +21,7 @@ class PlaneExtracter():
         cloud_numpy = cloud[:,:3]
         pointcloud_list = []
         number_of_planes = 4
-        plane_pointcloud_all = np.zeros((0,3))   
+        plane_normals = np.zeros((0,4))   
         for i in range(number_of_planes):
             plane = cloud_open3d.segment_plane(self.min_dist,self.min_number_of_points,self.num_iter)
             plane_pointcloud = o3d.geometry.PointCloud()
@@ -29,11 +29,11 @@ class PlaneExtracter():
             plane_pointcloud.paint_uniform_color(np.random.rand(3))
             if np.abs(np.dot(plane[0][:3],np.array([0,1,0])))>0.2:
                 #check if ground plane by checking dot product with [0,1,0] and exlude it
-                plane_pointcloud_all=np.vstack((plane_pointcloud_all,np.asarray(plane_pointcloud.points)))
+                plane_normals=np.vstack((plane_normals,plane[0]))
             cloud_numpy = cloud_numpy[~np.isin(np.arange(cloud_numpy.shape[0]),plane[1]),:3]
             cloud_open3d.points = o3d.utility.Vector3dVector(cloud_numpy)
     
-        return plane_pointcloud_all
+        return plane_normals
         # o3d.visualization.draw_geometries(pointcloud_list)
 
     def visualize_poindclouds(self,pcd1,pcd2):
@@ -51,6 +51,21 @@ def convert(x_s, y_s, z_s):
     z = z_s * scaling + offset
 
     return x, y, z
+
+def getPlaneCorrespondences(plane_dict,cloud_source,cloud_target,transformation):
+    plane_extractor = PlaneExtracter()
+    source_cloud_planes = plane_extractor.extract_planes(cloud_source)
+    target_cloud_planes = plane_extractor.extract_planes(cloud_target)
+    transformed_cloud_planes = transformation @ source_cloud_planes 
+    for normals_source in transformed_cloud_planes:
+        for normals_target in target_cloud_planes:
+            if (np.linalg.norm(np.cross(normals_source[:3],normals_target[:3])) < 0.001 and np.abs(normals_source[3] - normals_target[3])):
+                print("Same")
+
+
+
+
+
 
 def load_velodyne_timestep(f_bin):
     hits = []
