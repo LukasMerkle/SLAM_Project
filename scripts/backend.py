@@ -4,6 +4,7 @@ import math
 import copy
 import scipy.linalg
 import pandas as pd
+import pdb
 
 # TODO:
 # programatically create A and b (pipeline)
@@ -27,61 +28,71 @@ def main():
     odom2 = odom_model(x1,x2) + odom_noise()
 
     # MEASUREMENT: [nx, ny, nz, d, id_landmark, id_pose]
-    measurement11 = np.hstack([measurement_model_w(x0, plane1) + measurement_noise(0), 1, 1])
-    measurement12 = np.hstack([measurement_model_w(x0, plane2) + measurement_noise(0), 2, 1])
-    measurement21 = np.hstack([measurement_model_w(x1, plane1) + measurement_noise(0), 1, 2])
-    measurement22 = np.hstack([measurement_model_w(x1, plane2) + measurement_noise(0), 2, 2])
-    landmark_measurements = np.hstack([measurement11, measurement12, measurement21, measurement22])
+    measurement11 = np.hstack([measurement_model_w(x0, plane1) + measurement_noise(0), 0, 0])
+    measurement12 = np.hstack([measurement_model_w(x0, plane2) + measurement_noise(0), 1, 0])
+    measurement21 = np.hstack([measurement_model_w(x1, plane1) + measurement_noise(0), 0, 1])
+    measurement22 = np.hstack([measurement_model_w(x1, plane2) + measurement_noise(0), 1, 1])
+    landmark_measurements = np.vstack([measurement11, measurement12, measurement21, measurement22])
+    landmark_measurements1 = np.hstack([measurement11[:-2], measurement12[:-2], measurement21[:-2], measurement22[:-2]])
 
-    n1 = plane1[:3] + np.random.normal(0,0.1, 3)
-    n1 /= np.linalg.norm(n1)
-    plane1[:3] = n1
+    n1 = plane1[:3] #+ np.random.normal(0,0.1, 3)
+    #n1 /= np.linalg.norm(n1)
+    #plane1[:3] = n1
 
-    n2 = plane2[:3] + np.random.normal(0,0.1, 3)
-    n2 /= np.linalg.norm(n2)
-    plane2[:3] = n2
+    n2 = plane2[:3] #+ np.random.normal(0,0.1, 3)
+    #n2 /= np.linalg.norm(n2)
+    #plane2[:3] = n2
 
     init_measurement1 = measurement_model_w(x0, plane1)
     init_measurement2 = measurement_model_w(x0, plane2)
 
     #std_x = np.array([0.5, 0.5, 0.1]) # x, y, theta
-    std_x = np.array([0.6, 0.6, .1]) # x, y, theta
+    std_x = np.array([1, 1, .1]) # x, y, theta
+    std_l = np.array([0.01, 0.01, 0.01, 0.01]) # nx, ny, nz, d
     #std_l = np.array([1, 1, 1, 1]) # nx, ny, nz, d
-    std_l = np.array([0.1, 0.1, 0.1, 0.1]) # nx, ny, nz, d
 
     s_x0 = x0
-    s_l = np.hstack([invert_measurement_l(x0, init_measurement1), invert_measurement_l(x0,init_measurement2)])
+    s_l1 = np.hstack([invert_measurement_l(x0, init_measurement1), invert_measurement_l(x0,init_measurement2)])
+    s_l = np.vstack([invert_measurement_l(x0, init_measurement1), invert_measurement_l(x0,init_measurement2)])
     print(s_l)
     s_x1 = np.hstack([x0, x0+odom1])
+    s_x = np.vstack([x0, x0+odom1])
 
-    s = np.hstack([s_x1, s_l])
-    print(s)
+    #s = np.vstack([s_x1, s_l])
+    #print(s)
 
-    A_hard,b_hard = hardcode_generateAB(s_x1, s_l, odom1, landmark_measurements, std_x, std_l)
-    print(A.shape, b.shape, s.shape)
+    A, b = generateAB(s_x, s_l, odom1.reshape(1, 3), landmark_measurements, std_x, std_l)
 
+    A_hard,b_hard = hardcode_generateAB(s_x1, s_l1, odom1, landmark_measurements1, std_x, std_l)
+    #print(A.shape, b.shape, s.shape)
 
-    out_g, err_g = gauss_newton(s, odom1, landmark_measurements, std_x, std_l)
-    out_lm, err_lm = lm(s, odom1, landmark_measurements, std_x, std_l)
+    err_A = A_hard - A
+    err_b = b_hard - b
+    pdb.set_trace()
+
+    s = np.hstack([s_x.reshape(-1,), s_l.reshape(-1,)])
+    out_g_sx, out_g_sl, err_g = gauss_newton(s_x, s_l, odom1.reshape(1, 3), landmark_measurements, std_x, std_l)
+    #out_lm, err_lm = lm(s, odom1, landmark_measurements, std_x, std_l)
+    out_g = np.hstack([out_g_sx.reshape(-1,), out_g_sl.reshape(-1,)])
     print(np.round(s, 2))
     print(np.round(out_g,2))
-    print(np.round(out_lm,2))
+    #print(np.round(out_lm,2))
     print(gt)
 
     print("ACTUAL ERRORS: ")
     print(err_g)
-    print(err_lm)
+    #print(err_lm)
 
     s_error = np.linalg.norm(gt-s)
     og_error = np.linalg.norm(gt-out_g)
-    olm_error = np.linalg.norm(gt-out_lm)
-    print(s_error, og_error, olm_error)
+    #olm_error = np.linalg.norm(gt-out_lm)
+    print(s_error, og_error)#, olm_error)
 
     print(np.round(abs(gt[:6]-out_g[:6]),3))
-    print(np.round(abs(gt[:6]-out_lm[:6]),3))
+    #print(np.round(abs(gt[:6]-out_lm[:6]),3))
 
-    x_results_pd = pd.DataFrame(np.vstack([s[:6], out_g[:6], out_lm[:6], gt[:6]]))
-    l_results_pd = pd.DataFrame(np.vstack([s[6:], out_g[6:], out_lm[6:], gt[6:]]))
+    x_results_pd = pd.DataFrame(np.vstack([s[:6], out_g[:6], gt[:6]]))
+    l_results_pd = pd.DataFrame(np.vstack([s[6:], out_g[6:], gt[6:]]))
     print("STATE!!!!")
     print(x_results_pd)
 
@@ -180,7 +191,7 @@ def measurement_jacobian(pose, plane):
     return H
 
 def odom_noise():
-    return np.hstack([np.random.normal(0, 0.6, 2), np.random.normal(0, 0.1, 1)])
+    return np.hstack([np.random.normal(0, 1, 2), np.random.normal(0, 0.1, 1)])
 
 def measurement_noise(std):
     return np.random.normal(0,std, 4)
@@ -191,12 +202,12 @@ def measurement_noise(std):
 # odom: num_odom x 3
 def generateAB(s_x, s_l, odom, landmark_measurements, std_x, std_l, dim_x=3, dim_l=4):
     num_poses = s_x.shape[0]
-    num_l = int(len(s_l) / dim_l)
+    num_l = s_l.shape[0]
     #num_l = len(np.unique(landmark_measurements[:, L_IDX]))
-    num_odom = len(odom) + 1 # includes prior
-    num_l_measurements = int(len(landmark_measurements) / dim_l)
+    num_odom = odom.shape[0] + 1 # includes prior
+    num_l_measurements = landmark_measurements.shape[0]
 
-    std_p = np.array([0.05, 0.05, 0.005]) # x, y, theta prior
+    std_p = np.array([0.05, 0.05, 0.001]) # x, y, theta prior
 
     A_x = np.zeros((num_odom * dim_x, num_poses * dim_x + num_l * dim_l))
     A_x[:3,:3] = np.eye(3) / np.sqrt(std_p)
@@ -209,31 +220,32 @@ def generateAB(s_x, s_l, odom, landmark_measurements, std_x, std_l, dim_x=3, dim
         A_x[3 * (i + 1):3 * (i + 2), 3 * i: 3 * (i + 2)] = odom_jac / np.sqrt(std_x_repeated)
         p_x1 = np.hstack([p_x1, odom_model(s_x[i], s_x[i + 1])])
 
+    p_x1 = p_x1.reshape(-1, 1)
     A_l1 = np.zeros((num_l_measurements * dim_l, num_poses * dim_x + num_l * dim_l))
 
     p_l1_list = []
     for i in range(num_l_measurements):
-        l_id = landmark_measurements[i, L_IDX]
-        p_id = landmark_measurements[i, P_IDX]
+        l_id = int(landmark_measurements[i, L_IDX])
+        p_id = int(landmark_measurements[i, P_IDX])
         measurement_jac = numeraical_jacobian(s_x[p_id], s_l[l_id], measurement_model_w)
         A_l1[4 * i:4 * (i + 1), p_id:p_id + 3] = measurement_jac[:, :3] / np.sqrt(std_l.reshape(-1, 1))
-        A_l1[4 * i:4 * (i + 1), num_poses * 3 + l_id * 4:num_poses * 3 + (l_id + 1) * 4]
+        A_l1[4 * i:4 * (i + 1), num_poses * 3 + l_id * 4:num_poses * 3 + (l_id + 1) * 4] \
                                 = measurement_jac[:, 3:7] / np.sqrt(std_l.reshape(-1, 1))
 
         p_l1_list.append(measurement_model_w(s_x[p_id], s_l[l_id]))
 
-    p_l1 = np.vstack(p_l1_list)
+    p_l1 = np.hstack(p_l1_list).reshape(-1,1)
 
     m_x1 = np.vstack([np.array([0,0,0]), odom]).reshape(-1, 1)
     std_x_repeated = np.tile(std_x, num_poses - 1)
-    b_x1 = (m_x1 - p_x1) / np.sqrt(np.hstack([std_p, std_x_repeated]))
+    b_x1 = (m_x1 - p_x1) / np.sqrt(np.hstack([std_p, std_x_repeated]).reshape(-1, 1))
 
     m_l1 = landmark_measurements[:, :-2].reshape(-1, 1)
     std_l_repeated = np.tile(std_l, num_l_measurements)
-    b_l1 = (m_l1 - p_l1) / np.sqrt(std_l_repeated)
+    b_l1 = (m_l1 - p_l1) / np.sqrt(std_l_repeated.reshape(-1, 1))
 
     A = np.vstack([A_x, A_l1])
-    b = np.hstack([b_x1, b_l1])
+    b = np.vstack([b_x1, b_l1]).reshape(-1,)
     return A,b
 
 
@@ -242,35 +254,35 @@ def hardcode_generateAB(s_x1, s_l, odom1, landmark_measurements, std_x, std_l, d
     num_l = int(len(s_l) / dim_l)
     num_l_measurements = int(len(landmark_measurements) / dim_l)
 
-    std_p = np.array([0.05, 0.05, 0.005]) # x, y, theta prior
+    std_p = np.array([0.05, 0.05, 0.001]) # x, y, theta prior
     A_x1 = np.zeros((6,14))
-    A_x1[:3,:3] = np.eye(3) / np.sqrt(std_p)
+    A_x1[:3,:3] = np.eye(3) / np.sqrt(std_p.reshape(-1, 1))
     odom_jac = odom_jacobian(s_x1[0:3], s_x1[3:6])
-    std_x_repeated = np.tile(std_x, 2)
-    A_x1[3:,:6] = odom_jac / np.sqrt(std_x_repeated)
+   # std_x_repeated = np.tile(std_x, 2)
+    A_x1[3:,:6] = odom_jac / np.sqrt(std_x.reshape(-1, 1))
 
     A_l1 = np.zeros((16,14))
     #measurement_jac1 = measurement_jacobian(s_x1[:3], s_l[:4])
     measurement_jac1 = numeraical_jacobian(s_x1[:3], s_l[:4], measurement_model_w)
-    A_l1[:4,0:3] = measurement_jac1[:, 0:3] / np.sqrt(std_x)
-    A_l1[:4,6:10] = measurement_jac1[:, 3:7] / np.sqrt(std_l)
+    A_l1[:4,0:3] = measurement_jac1[:, 0:3] / np.sqrt(std_l.reshape(-1, 1))
+    A_l1[:4,6:10] = measurement_jac1[:, 3:7] / np.sqrt(std_l.reshape(-1, 1))
 
     #measurement_jac2 = measurement_jacobian(s_x1[:3], s_l[4:])
     measurement_jac2 = numeraical_jacobian(s_x1[:3], s_l[4:], measurement_model_w)
-    A_l1[4:8,0:3] = measurement_jac2[:, 0:3] / np.sqrt(std_x)
-    A_l1[4:8,10:14] = measurement_jac2[:, 3:7] / np.sqrt(std_l)
+    A_l1[4:8,0:3] = measurement_jac2[:, 0:3] / np.sqrt(std_l.reshape(-1, 1))
+    A_l1[4:8,10:14] = measurement_jac2[:, 3:7] / np.sqrt(std_l.reshape(-1, 1))
 
     #measurement_jac1 = measurement_jacobian(s_x1[3:], s_l[:4])
     measurement_jac1 = numeraical_jacobian(s_x1[3:], s_l[:4], measurement_model_w)
-    A_l1[8:12,3:6] = measurement_jac1[:, 0:3] / np.sqrt(std_x)
-    A_l1[8:12,6:10] = measurement_jac1[:, 3:7] / np.sqrt(std_l)
+    A_l1[8:12,3:6] = measurement_jac1[:, 0:3] / np.sqrt(std_l.reshape(-1, 1))
+    A_l1[8:12,6:10] = measurement_jac1[:, 3:7] / np.sqrt(std_l.reshape(-1, 1))
     #measurement_jac2 = measurement_jacobian(s_x1[3:], s_l[4:])
     measurement_jac2 = numeraical_jacobian(s_x1[3:], s_l[4:], measurement_model_w)
-    A_l1[12:16,3:6] = measurement_jac2[:, 0:3] / np.sqrt(std_x)
-    A_l1[12:16,10:14] = measurement_jac2[:, 3:7] / np.sqrt(std_l)
+    A_l1[12:16,3:6] = measurement_jac2[:, 0:3] / np.sqrt(std_l.reshape(-1, 1))
+    A_l1[12:16,10:14] = measurement_jac2[:, 3:7] / np.sqrt(std_l.reshape(-1, 1))
 
     m_x1 = np.hstack([np.array([0,0,0]), odom1])
-    p_x1 = np.hstack([np.array([0,0,0]), odom_model(s_x1[:3], s_x1[3:])])
+    p_x1 = np.hstack([s_x1[:3], odom_model(s_x1[:3], s_x1[3:])])
     std_x_repeated = np.tile(std_x, num_x - 1)
     b_x1 = (m_x1 - p_x1) / np.sqrt(np.hstack([std_p, std_x_repeated]))
 
@@ -284,24 +296,24 @@ def hardcode_generateAB(s_x1, s_l, odom1, landmark_measurements, std_x, std_l, d
     b = np.hstack([b_x1, b_l1])
     return A,b
 
-def gauss_newton(s, odom1, landmark_measurements, std_x, std_l, max_iter=1000):
+def gauss_newton(s_x, s_l, odom, landmark_measurements, std_x, std_l, max_iter=1000):
     for i in range(max_iter):
-        s_x1 = s[:6]
-        s_l = s[6:]
-        A,b = generateAB(s_x1, s_l, odom1, landmark_measurements, std_x, std_l)
+        A,b = generateAB(s_x, s_l, odom, landmark_measurements, std_x, std_l)
         if(i == 1):
             print("START ERROR: ", np.linalg.norm(b))
         dx = scipy.linalg.solve(np.dot(A.T,A),np.dot(A.T,b))
-        s_new = s + dx
-        _,b_new = generateAB(s_new[:6], s_new[6:], odom1, landmark_measurements, std_x, std_l)
+        s_x_new = s_x + dx[:(odom.shape[0] + 1) * 3].reshape(-1, 3) # dim_x
+        s_l_new = s_l + dx[(odom.shape[0] + 1) * 3:].reshape(-1, 4) # dim_l
+        _,b_new = generateAB(s_x_new, s_l_new, odom, landmark_measurements, std_x, std_l)
         if(np.linalg.norm(b_new) > np.linalg.norm(b)):
             print("Error going up - breaking", i)
-            return s, np.linalg.norm(b)
-        s = s_new
+            return s_x, s_l, np.linalg.norm(b)
+        s_x = s_x_new
+        s_l = s_l_new
         if(np.linalg.norm(b_new - b) < 1e-12):
             print("Converged",i)
             break
-    return s, np.linalg.norm(b_new)
+    return s_x, s_l, np.linalg.norm(b_new)
 
 def lm(s, odom1, landmark_measurements, std_x, std_l, max_iter=1000):
     lambda_lm = 10
