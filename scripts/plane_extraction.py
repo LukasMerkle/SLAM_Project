@@ -20,24 +20,25 @@ class PlaneExtracter():
         cloud_numpy = cloud[:,:3]
         pointcloud_list = []
         number_of_planes = 4
-        
+        plane_pointcloud_all = np.zeros((0,3))   
         for i in range(number_of_planes):
             plane = cloud_open3d.segment_plane(self.min_dist,self.min_number_of_points,self.num_iter)
-            
             plane_pointcloud = o3d.geometry.PointCloud()
             plane_pointcloud.points = o3d.utility.Vector3dVector(cloud_numpy[plane[1],:3])
             plane_pointcloud.paint_uniform_color(np.random.rand(3))
             if np.abs(np.dot(plane[0][:3],np.array([0,1,0])))>0.02:
                 #check if ground plane by checking dot product with [0,1,0] and exlude it
-                pointcloud_list.append(plane_pointcloud)
+                plane_pointcloud_all=np.vstack((plane_pointcloud_all,np.asarray(plane_pointcloud.points)))
             cloud_numpy = cloud_numpy[~np.isin(np.arange(cloud_numpy.shape[0]),plane[1]),:3]
             cloud_open3d.points = o3d.utility.Vector3dVector(cloud_numpy)
+    
+        return plane_pointcloud_all
+        # o3d.visualization.draw_geometries(pointcloud_list)
 
-        o3d.visualization.draw_geometries(pointcloud_list)
-
-    def visualize_poindcloud_and_plane(self,pcd,plane):
-        all_points = [pcd]
-        all_points.append(plane.paint_uniform_color([1,0,1]))
+    def visualize_poindclouds(self,pcd1,pcd2):
+        pcd1.paint_uniform_color([1,0,1])
+        pcd2.paint_uniform_color([0,1,1])
+        all_points = [pcd1,pcd2]
         o3d.visualization.draw_geometries(all_points)
 
 def convert(x_s, y_s, z_s):
@@ -87,18 +88,36 @@ def main(args):
         desired_time_stamp = int(sys.argv[2])
         print("starting at desired time stamp\n")
     else: start_at_desired_frame = False
-
+    planes_all = []
+    transformation = np.eye(4)
+    first_bin = open(sys.argv[1]+str(desired_time_stamp)+".bin", "rb")
+    first_cloud = cloud = load_velodyne_timestep(first_bin)
+    first_cloud_open3d= o3d.geometry.PointCloud()
+    first_cloud_open3d.points = o3d.utility.Vector3dVector(first_cloud[:,:3])   
     for i,f in enumerate(sorted_path_list):
         if start_at_desired_frame is True and f-desired_time_stamp < 0:
             continue
         start_at_desired_frame = False
         f_bin = open(sys.argv[1]+str(f)+".bin", "rb")
         cloud = load_velodyne_timestep(f_bin)
-        print(f)
-        # pcd = o3d.io.read_point_cloud("/home/lmerkle/Downloads/dataset-geometry-only-pc/stimuli/cube_D01_L01.ply")
-        # cloud = np.asarray(pcd.points)
         plane_extractor = PlaneExtracter()
-        plane_extractor.extract_planes(cloud)
+        if (f - desired_time_stamp > 10*(10**6)):
+            print("f",f*(10**-6))
+            print("desired",desired_time_stamp*(10**-6))
+            planes_all.append(plane_extractor.extract_planes(cloud))
+        if len(planes_all) == 1:
+            # cloud_open3d_1= o3d.geometry.PointCloud()
+            # cloud_open3d_1.points = o3d.utility.Vector3dVector(planes_all[0])
+
+            cloud_open3d_2= o3d.geometry.PointCloud()
+            cloud_open3d_2.points = o3d.utility.Vector3dVector(planes_all[0])
+            
+            reg_p2l = o3d.registration.registration_icp(first_cloud_open3d, cloud_open3d_2, 0.002, np.eye(4),o3d.registration.TransformationEstimationPointToPoint())
+            transformation =  transformation @ np.array(reg_p2l.transformation)
+            print(transformation)
+            transformed_point_cloud = first_cloud_open3d.transform(np.array(reg_p2l.transformation))
+            plane_extractor.visualize_poindclouds(transformed_point_cloud,cloud_open3d_2)
+            del planes_all[0]
 
 
 if __name__ == '__main__':
