@@ -111,25 +111,20 @@ def main(args):
         if len(planes_all) == 2:
             cloud_open3d_1= o3d.geometry.PointCloud()
             cloud_open3d_1.points = o3d.utility.Vector3dVector(planes_all[0])
-            # cloud_open3d_1.estimate_normals()
             cloud_open3d_2= o3d.geometry.PointCloud()
             cloud_open3d_2.points = o3d.utility.Vector3dVector(planes_all[1])
-            # cloud_open3d_2.estimate_normals()
 
             reg_p2l = o3d.registration.registration_icp(cloud_open3d_1, cloud_open3d_2, 2, np.eye(4),o3d.registration.TransformationEstimationPointToPoint(),o3d.registration.ICPConvergenceCriteria(max_iteration = 200))
             evaluation = o3d.registration.evaluate_registration(cloud_open3d_1, cloud_open3d_2,2, reg_p2l.transformation)
-            print(evaluation)   
             transformation = np.array(reg_p2l.transformation) @ transformation
             del planes_all[0]
-            if f-desired_time_stamp > 2*10**6:
+            
+            #TEST AFTER N SECONDS
+            if f-desired_time_stamp >  2*10**6:
                 print(np.linalg.inv(transformation))
                 transformed_point_cloud = copy.deepcopy(first_cloud_open3d)
                 transformed_point_cloud.transform(transformation)
-
-                evaluation = o3d.registration.evaluate_registration(first_cloud_open3d, cloud_open3d_2, 2, transformation)
-                print(evaluation)
                 plane_extractor.visualize_poindclouds(transformed_point_cloud,cloud_open3d_2)
-
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
