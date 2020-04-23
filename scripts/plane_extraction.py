@@ -56,16 +56,10 @@ def getPlaneCorrespondences(cloud_source,cloud_target,transformation):
     transformed_cloud_planes = transformation @ np.hstack((source_cloud_planes[:,:3],np.ones((source_cloud_planes.shape[0],1)))).T 
     transformed_cloud_planes[-1,:] = source_cloud_planes[:,-1]
     transformed_cloud_planes = transformed_cloud_planes.T
-    # print("Transformed Cloud",transformed_cloud_planes)
-    # print("Target Cloud",target_cloud_planes)
-    print("source",source_cloud_planes.shape[0])
-    print("target",target_cloud_planes.shape[0])
     for normals_source in transformed_cloud_planes:
         for normals_target in target_cloud_planes:
             if (1-np.dot(normals_source[:3]/np.linalg.norm(normals_source[:3]),normals_target[:3])<0.1) and (np.abs(normals_source[3]-normals_target[3])<0.2):
-                print("Same")
-                print("Source",normals_source)
-                print("Target",normals_target)
+                
 
 def load_velodyne_timestep(f_bin):
     hits = []
