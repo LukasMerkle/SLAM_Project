@@ -59,7 +59,7 @@ def getPlaneCorrespondences(cloud_source,cloud_target,transformation):
     for normals_source in transformed_cloud_planes:
         for normals_target in target_cloud_planes:
             if (1-np.dot(normals_source[:3]/np.linalg.norm(normals_source[:3]),normals_target[:3])<0.1) and (np.abs(normals_source[3]-normals_target[3])<0.2):
-                
+                print("found")
 
 def load_velodyne_timestep(f_bin):
     hits = []
