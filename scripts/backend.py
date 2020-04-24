@@ -5,6 +5,7 @@ import copy
 import scipy.linalg
 import pandas as pd
 import pdb
+from optimizers import gauss_newton, lm
 
 # TODO:
 # programatically create A and b (pipeline)
@@ -46,6 +47,9 @@ def main():
     init_measurement1 = measurement_model_w(x0, plane1)
     init_measurement2 = measurement_model_w(x0, plane2)
 
+    print(init_measurement1, init_measurement2)
+
+    pdb.set_trace()
     #std_x = np.array([0.5, 0.5, 0.1]) # x, y, theta
     std_x = np.array([1, 1, .1]) # x, y, theta
     std_l = np.array([0.01, 0.01, 0.01, 0.01]) # nx, ny, nz, d
@@ -169,14 +173,22 @@ def measurement_model_w(pose_w, plane_w):
     return np.hstack([n_l,d_l])
 
 # TODO: pass in normalized n
-def invert_measurement_l(pose_w, plane_l):
-    n_l = plane_l[:3].reshape(-1,1)
-    d_l = plane_l[-1]
+# def invert_measurement_l(pose_w, plane_l):
+#     n_l = plane_l[:3].reshape(-1,1)
+#     d_l = plane_l[-1]
+#     x,y,theta = pose_w
+#     h = np.array([x,y,1]).reshape(-1,1)
+#     n_w = np.dot(rot3D(theta).T, n_l).reshape(-1,)
+
+#     d_w = (-np.dot(n_w.T, h) + d_l).reshape(-1,)
+#     return np.hstack([n_w,d_w])
+
+def invert_measurement_l(pose_w, planes):
     x,y,theta = pose_w
     h = np.array([x,y,1]).reshape(-1,1)
-    n_w = np.dot(rot3D(theta).T, n_l).reshape(-1,)
+    n_w = np.dot(planes[:,:3], rot3D(theta).T)
 
-    d_w = (-np.dot(n_w.T, h) + d_l).reshape(-1,)
+    d_w = (-np.dot(n_w, h) + planes[:,-1].reshape(-1,1))
     return np.hstack([n_w,d_w])
 
 def measurement_jacobian(pose, plane):
@@ -294,46 +306,7 @@ def hardcode_generateAB(s_x1, s_l, odom1, landmark_measurements, std_x, std_l, d
     b = np.hstack([b_x1, b_l1])
     return A,b
 
-def gauss_newton(s_x, s_l, odom, landmark_measurements, std_x, std_l, max_iter=1000):
-    for i in range(max_iter):
-        A,b = generateAB(s_x, s_l, odom, landmark_measurements, std_x, std_l)
-        if(i == 1):
-            print("START ERROR: ", np.linalg.norm(b))
-        dx = scipy.linalg.solve(np.dot(A.T,A),np.dot(A.T,b))
-        s_x_new = s_x + dx[:(odom.shape[0] + 1) * 3].reshape(-1, 3) # dim_x
-        s_l_new = s_l + dx[(odom.shape[0] + 1) * 3:].reshape(-1, 4) # dim_l
-        _,b_new = generateAB(s_x_new, s_l_new, odom, landmark_measurements, std_x, std_l)
-        if(np.linalg.norm(b_new) > np.linalg.norm(b)):
-            print("Error going up - breaking", i)
-            return s_x, s_l, np.linalg.norm(b)
-        s_x = s_x_new
-        s_l = s_l_new
-        if(np.linalg.norm(b_new - b) < 1e-12):
-            print("Converged",i)
-            break
-    return s_x, s_l, np.linalg.norm(b_new)
 
-def lm(s, odom1, landmark_measurements, std_x, std_l, max_iter=1000):
-    lambda_lm = 10
-
-    for i in range(max_iter):
-        s_x1 = s[:6]
-        s_l = s[6:]
-        A,b = generateAB(s_x1, s_l, odom1, landmark_measurements, std_x, std_l)
-        dx = scipy.linalg.solve(np.dot(A.T,A) + np.eye(A.shape[1]) * lambda_lm, np.dot(A.T,b))
-        s_new = s + dx
-        _,b_new = generateAB(s_new[:6], s_new[6:], odom1, landmark_measurements, std_x, std_l)
-        if(np.linalg.norm(b_new) > np.linalg.norm(b)):
-            lambda_lm *= 10
-            continue
-        else:
-            lambda_lm /= 10
-            s = s_new
-
-        if(np.linalg.norm(b_new - b) < 1e-12):
-            print("Converged",i)
-            break
-    return s, np.linalg.norm(b_new)
 
 if __name__ == '__main__':
     main()
