@@ -7,6 +7,7 @@ import numpy as np
 import os
 import copy
 import open3d as o3d
+import pickle
 
 class PlaneExtracter():
     def __init__(self):
@@ -118,7 +119,7 @@ def main(args):
     first_cloud_open3d= o3d.geometry.PointCloud()
     first_cloud_open3d.points = o3d.utility.Vector3dVector(first_cloud[:,:3])
     recent_clouds = []
-
+    trajectory = []
     #Loop through all lidar scans and start with desired scan
     for i,f in enumerate(sort_paths(sys.argv[1])):
         #check if current scan is the desired start scan
@@ -138,16 +139,20 @@ def main(args):
 
         reg_icp = o3d.registration.registration_icp(cloud_open3d_1, cloud_open3d_2, 2, np.eye(4),o3d.registration.TransformationEstimationPointToPoint(),o3d.registration.ICPConvergenceCriteria(max_iteration = 200))
         transformation = np.array(reg_icp.transformation) @ transformation
+        trajectory.append((f,transformation))
         del recent_clouds[0]
         
-        getPlaneCorrespondences(cloud_open3d_1, cloud_open3d_2,reg_icp.transformation)
+        # getPlaneCorrespondences(cloud_open3d_1, cloud_open3d_2,reg_icp.transformation)
 
         #TEST AFTER N SECONDS
-        if f-desired_time_stamp >  2*10**6:
+        if f-desired_time_stamp >  20*10**6:
             print(np.linalg.inv(transformation))
+            with open('trajectory.pickle', 'wb') as f:
+                pickle.dump(trajectory, f)
             transformed_point_cloud = copy.deepcopy(first_cloud_open3d)
             transformed_point_cloud.transform(transformation)
             visualize_poindclouds(transformed_point_cloud,cloud_open3d_2)
+            break
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
