@@ -200,54 +200,52 @@ def measurement_noise(std):
 # s_l: num_l x dim_l
 # landmark_measurements: num_l_meas x 6
 # odom: num_odom x 3
-def generateAB(s_x, s_l, odom, landmark_measurements, std_x, std_l, dim_x=3, dim_l=4):
+def generateAB(s_x, s_l, odom_list, landmark_measurements, std_x, std_l, dim_x=3, dim_l=4):
     num_poses = s_x.shape[0]
     num_l = s_l.shape[0]
-    #num_l = len(np.unique(landmark_measurements[:, L_IDX]))
-    num_odom = odom.shape[0] + 1 # includes prior
     num_l_measurements = landmark_measurements.shape[0]
 
-    std_p = np.array([0.05, 0.05, 0.001]) # x, y, theta prior
+    std_p = np.array([0.05, 0.05, 0.001])
 
-    A_x = np.zeros((num_odom * dim_x, num_poses * dim_x + num_l * dim_l))
-    A_x[:3,:3] = np.eye(3) / np.sqrt(std_p)
+    A_prior = np.zeros((3, s_x.shape[0]*dim_x + s_l.shape[0]*dim_l))
+    A_prior[:,:3] = np.eye(3) / np.sqrt(std_p)
 
-    p_x1 = s_x[0]
-    # -1 because prior already accounted for
-    for i in range(num_odom - 1):
-        odom_jac = odom_jacobian(s_x[i], s_x[i + 1])
-        std_x_repeated = np.tile(std_x, 2)
-        A_x[3 * (i + 1):3 * (i + 2), 3 * i: 3 * (i + 2)] = odom_jac / np.sqrt(std_x_repeated)
-        p_x1 = np.hstack([p_x1, odom_model(s_x[i], s_x[i + 1])])
-
-    p_x1 = p_x1.reshape(-1, 1)
-    A_l1 = np.zeros((num_l_measurements * dim_l, num_poses * dim_x + num_l * dim_l))
-
-    p_l1_list = []
-    for i in range(num_l_measurements):
-        l_id = int(landmark_measurements[i, L_IDX])
-        p_id = int(landmark_measurements[i, P_IDX])
-        measurement_jac = numeraical_jacobian(s_x[p_id], s_l[l_id], measurement_model_w)
-        A_l1[4 * i:4 * (i + 1), p_id:p_id + 3] = measurement_jac[:, :3] / np.sqrt(std_l.reshape(-1, 1))
-        A_l1[4 * i:4 * (i + 1), num_poses * 3 + l_id * 4:num_poses * 3 + (l_id + 1) * 4] \
-                                = measurement_jac[:, 3:7] / np.sqrt(std_l.reshape(-1, 1))
-
-        p_l1_list.append(measurement_model_w(s_x[p_id], s_l[l_id]))
-
-    p_l1 = np.hstack(p_l1_list).reshape(-1,1)
-
-    m_x1 = np.vstack([np.array([0,0,0]), odom]).reshape(-1, 1)
+    A_odom = [A_prior]
+    p_odom = [s_x[0]]
+    for i in range(odom_list.shape[0]):
+        odom_jac = odom_jacobian(s_x[i], s_x[i + 1]) / np.sqrt(std_x).reshape(-1,1)
+        A_sub = np.hstack([np.zeros((dim_x,i*dim_x)), odom_jac, 
+                           np.zeros((dim_x,(num_poses-i-2)*dim_x)), 
+                           np.zeros((dim_x, num_l*dim_l))])
+        A_odom.append(A_sub)
+        p_odom.append(odom_model(s_x[i], s_x[i + 1]))
+    A_odom = np.vstack(A_odom)
+    p_odom = np.hstack(p_odom).reshape(-1,1)
+    m_odom = np.vstack([np.array([0,0,0]), odom_list]).reshape(-1,1)
     std_x_repeated = np.tile(std_x, num_poses - 1)
-    b_x1 = (m_x1 - p_x1) / np.sqrt(np.hstack([std_p, std_x_repeated]).reshape(-1, 1))
+    b_odom = (m_odom - p_odom) / np.sqrt(np.hstack([std_p, std_x_repeated]).reshape(-1, 1))
 
-    m_l1 = landmark_measurements[:, :-2].reshape(-1, 1)
+    A_landmark = []
+    p_landmark = []
+    for i,l in enumerate(landmark_measurements):
+        l_id = int(l[L_IDX])
+        p_id = int(l[P_IDX])
+        measurement_jac = numeraical_jacobian(s_x[p_id], s_l[l_id], measurement_model_w) / np.sqrt(std_l.reshape(-1, 1))
+        A_sub = np.hstack([np.zeros((dim_l,p_id*dim_x)), measurement_jac[:,:3], 
+                           np.zeros((dim_l,(num_poses-p_id-1)*dim_x)),
+                           np.zeros((dim_l,l_id*dim_l)), measurement_jac[:,3:],np.zeros((dim_l,(num_l-l_id-1)*dim_l))])
+        A_landmark.append(A_sub)
+        p_landmark.append(measurement_model_w(s_x[p_id], s_l[l_id]))
+    A_landmark = np.vstack(A_landmark)
+    p_landmark = np.vstack(p_landmark).reshape(-1,1)
+
+    m_landmark = landmark_measurements[:, :-2].reshape(-1, 1)
     std_l_repeated = np.tile(std_l, num_l_measurements)
-    b_l1 = (m_l1 - p_l1) / np.sqrt(std_l_repeated.reshape(-1, 1))
+    b_landmark = (m_landmark - p_landmark) / np.sqrt(std_l_repeated.reshape(-1, 1))
 
-    A = np.vstack([A_x, A_l1])
-    b = np.vstack([b_x1, b_l1]).reshape(-1,)
+    A = np.vstack([A_odom, A_landmark])
+    b = np.vstack([b_odom, b_landmark]).reshape(-1,)
     return A,b
-
 
 def hardcode_generateAB(s_x1, s_l, odom1, landmark_measurements, std_x, std_l, dim_x=3, dim_l=4):
     num_x = int(len(s_x1) / dim_x)
