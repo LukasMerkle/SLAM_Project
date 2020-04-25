@@ -1,13 +1,11 @@
 import numpy as np
 import pickle
-from plane_extraction import sort_paths
 import matplotlib.pyplot as plt
 
 def plot_trajectory(gt_dict_directory, trajcetory_list):
     gt_dict = pickle.load( open(gt_dict_directory, "rb" ) )
     original_transform = gt_dict[trajectory_list[0][0]]
     theta_original =original_transform[-1]#-np.deg2rad(90.703)
-    print(original_transform[-3:])
     x_original = original_transform[1]
     y_original = original_transform[2]
     R = np.array([[np.cos(theta_original),-np.sin(theta_original)],[np.sin(theta_original),np.cos(theta_original)]])
@@ -22,7 +20,7 @@ def plot_trajectory(gt_dict_directory, trajcetory_list):
         gt_trajectory = np.vstack((gt_trajectory,np.array([transformed_gt_xy[0,0],transformed_gt_xy[1,0]])))
     
     RMSE = np.sqrt(np.mean((trajectory[:-1,:2]-gt_trajectory[:,:2])**2))
-    print(RMSE)
+    print("RMSE:",RMSE)
     plt.plot(trajectory[:,0], trajectory[:,1],'r--',label="trajectory")
     plt.plot(gt_trajectory[:,0],gt_trajectory[:,1],'b',label="ground truth")
     plt.gca().set_aspect('equal', adjustable='box')
@@ -34,10 +32,5 @@ def plot_trajectory(gt_dict_directory, trajcetory_list):
 
 if __name__ == '__main__':
     folder = '../data/2012-04-29/'
-    # traj = np.zeros((0,4))
-    # for f in sort_paths(folder+'velodyne_sync/'):
-    #     timestamp = int(f)
-    #     traj = np.vstack((traj,np.array([timestamp,0,0,0])))
-
-    trajectory_list = pickle.load( open('./trajectory_long.pickle', "rb" ) )
+    trajectory_list = pickle.load( open('./pickle_files/trajectory.pickle', "rb" ) )
     plot_trajectory(folder+'groundtruth_dict.pickle',trajectory_list)

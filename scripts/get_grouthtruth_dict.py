@@ -12,6 +12,6 @@ for f in sort_paths(folder+'velodyne_sync/'):
     all_difs = np.abs(gt[:,0]-timestamp)
     idx = np.argmin(all_difs)
     groundtruth_dict[f] = gt[idx,:]
-with open(folder+'groundtruth_dict.pickle', 'wb') as f:
+with open(folder+'./pickle_files/groundtruth_dict.pickle', 'wb') as f:
     pickle.dump(groundtruth_dict, f)
 
