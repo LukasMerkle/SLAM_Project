@@ -47,9 +47,6 @@ def main():
     init_measurement1 = measurement_model_w(x0, plane1)
     init_measurement2 = measurement_model_w(x0, plane2)
 
-    print(init_measurement1, init_measurement2)
-
-    pdb.set_trace()
     #std_x = np.array([0.5, 0.5, 0.1]) # x, y, theta
     std_x = np.array([1, 1, .1]) # x, y, theta
     std_l = np.array([0.01, 0.01, 0.01, 0.01]) # nx, ny, nz, d
@@ -66,7 +63,8 @@ def main():
     #print(s)
 
     A, b = generateAB(s_x, s_l, odom1.reshape(1, 3), landmark_measurements, std_x, std_l)
-
+    np.save('A', A)
+    np.save('b', b)
     A_hard,b_hard = hardcode_generateAB(s_x1, s_l1, odom1, landmark_measurements1, std_x, std_l)
     #print(A.shape, b.shape, s.shape)
 
@@ -173,23 +171,25 @@ def measurement_model_w(pose_w, plane_w):
     return np.hstack([n_l,d_l])
 
 # TODO: pass in normalized n
-# def invert_measurement_l(pose_w, plane_l):
-#     n_l = plane_l[:3].reshape(-1,1)
-#     d_l = plane_l[-1]
-#     x,y,theta = pose_w
-#     h = np.array([x,y,1]).reshape(-1,1)
-#     n_w = np.dot(rot3D(theta).T, n_l).reshape(-1,)
-
-#     d_w = (-np.dot(n_w.T, h) + d_l).reshape(-1,)
-#     return np.hstack([n_w,d_w])
-
-def invert_measurement_l(pose_w, planes):
+def invert_measurement_l(pose_w, plane_l):
+    n_l = plane_l[:3].reshape(-1,1)
+    d_l = plane_l[-1]
     x,y,theta = pose_w
     h = np.array([x,y,1]).reshape(-1,1)
-    n_w = np.dot(planes[:,:3], rot3D(theta).T)
+    n_w = np.dot(rot3D(theta).T, n_l).reshape(-1,)
 
-    d_w = (-np.dot(n_w, h) + planes[:,-1].reshape(-1,1))
+    d_w = (-np.dot(n_w.T, h) + d_l).reshape(-1,)
     return np.hstack([n_w,d_w])
+
+# def invert_measurement_l(pose_w, planes):
+#     # n_l = plane_l[:3].reshape(-1,1)
+#     # d_l = plane_l[-1]
+#     x,y,theta = pose_w
+#     h = np.array([x,y,1]).reshape(-1,1)
+#     n_w = np.dot(planes[:,:3], rot3D(theta).T)
+
+#     d_w = (-np.dot(n_w, h) + planes[:,-1].reshape)).reshape(-1,)
+#     return np.hstack([n_w,d_w])
 
 def measurement_jacobian(pose, plane):
     x,y,theta = pose
@@ -203,7 +203,8 @@ def measurement_jacobian(pose, plane):
     return H
 
 def odom_noise():
-    return np.hstack([np.random.normal(0, 1, 2), np.random.normal(0, 0.1, 1)])
+    # return np.hstack([np.random.normal(0, 1, 2), np.random.normal(0, 0.1, 1)])
+    return 0
 
 def measurement_noise(std):
     return np.random.normal(0,std, 4)

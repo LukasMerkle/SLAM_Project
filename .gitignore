@@ -1,6 +1,6 @@
 #custom
 /data/
-
+*.npy
 
 
 # Byte-compiled / optimized / DLL files
