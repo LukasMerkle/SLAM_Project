@@ -26,3 +26,6 @@ def transform_plane_to_local(pose_w, plane_w):
     n_l = np.dot(rot3D(theta), n_w).reshape(-1,)
     d_l = (np.dot(n_w.T, h) + d_w).reshape(-1,) / np.linalg.norm(n_w)
     return np.hstack([n_l,d_l])
+
+def normalize_planes(planes):
+    return planes[:, :4] / np.linalg.norm(planes[:,:3], axis=1).reshape(-1, 1)

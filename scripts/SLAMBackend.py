@@ -17,7 +17,7 @@ class SLAMBackend:
         self.std_p = std_p
         self.std_x = std_x
         self.std_l = std_l
-        
+
     def landmark_model(self, pose_w, planes):
         return transform_plane_to_local(pose_w, planes)
 
@@ -73,8 +73,8 @@ class SLAMBackend:
         p_odom = [s_x[0]]
         for i,o in enumerate(self.odom):
             odom_jac = self.odom_jacobian(s_x[i], s_x[i + 1]) / np.sqrt(self.std_x).reshape(-1,1)
-            A_sub = np.hstack([np.zeros((self.dim_x,i*self.dim_x)), odom_jac, 
-                            np.zeros((self.dim_x,(num_poses-i-2)*self.dim_x)), 
+            A_sub = np.hstack([np.zeros((self.dim_x,i*self.dim_x)), odom_jac,
+                            np.zeros((self.dim_x,(num_poses-i-2)*self.dim_x)),
                             np.zeros((self.dim_x, num_l*self.dim_l))])
             A_odom.append(A_sub)
             p_odom.append(self.odom_model(s_x[i], s_x[i + 1]))
@@ -91,7 +91,7 @@ class SLAMBackend:
             l_id = int(l[self.L_IDX])
             p_id = int(l[self.P_IDX])
             measurement_jac = self.numeraical_jacobian(s_x[p_id], s_l[l_id], self.landmark_model) / np.sqrt(self.std_l.reshape(-1, 1))
-            A_sub = np.hstack([np.zeros((self.dim_l,p_id*self.dim_x)), measurement_jac[:,:3], 
+            A_sub = np.hstack([np.zeros((self.dim_l,p_id*self.dim_x)), measurement_jac[:,:3],
                             np.zeros((self.dim_l,(num_poses-p_id-1)*self.dim_x)),
                             np.zeros((self.dim_l,l_id*self.dim_l)), measurement_jac[:,3:],np.zeros((self.dim_l,(num_l-l_id-1)*self.dim_l))])
             A_landmark.append(A_sub)
@@ -102,7 +102,6 @@ class SLAMBackend:
         m_landmark = np.vstack(self.landmarks)[:, :-2].reshape(-1, 1)
         std_l_repeated = np.tile(self.std_l, num_l_measurements)
         b_landmark = (m_landmark - p_landmark) / np.sqrt(std_l_repeated.reshape(-1, 1))
-
         A = np.vstack([A_odom, A_landmark])
         b = np.vstack([b_odom, b_landmark]).reshape(-1,)
         return A,b
@@ -136,7 +135,7 @@ class SLAMBackend:
 
     #-> appends to landmark_measurements, initializes new landmark in self.s_l
     # assumes you get odometry first
-    # assumes landmarks have normalized n's
+    # assumes landmarks have normalized n's because of prediction - measurement calculation
     def add_landmark_measurement(self, landmark_measurement):
         if self.s_l is not None:
             new_indices = landmark_measurement[np.where(landmark_measurement[:,self.L_IDX] >= self.s_l.shape[0])[0], self.L_IDX]
@@ -145,7 +144,7 @@ class SLAMBackend:
                 self.s_l = np.vstack([self.s_l, transform_plane_to_world(self.s_x[-1],new_measurements)])
         else:
             self.s_l = transform_plane_to_world(self.s_x[-1],landmark_measurement)
-        
+
         for x in landmark_measurement:
             self.landmarks.append(x)
 
@@ -166,15 +165,15 @@ if __name__ == "__main__":
     x1 = np.array([2,3,np.deg2rad(45)])
     odom1 = x1 - init_pose
 
-    plane1 = np.array([0.707, 0.707, 0, 5])
-    plane2 = np.array([-0.707, 0.707, 0, 2])
+    plane1 = np.array([0.707, 0.707, 0, 5]) / np.linalg.norm([0.707, 0.707])
+    plane2 = np.array([-0.707, 0.707, 0, 2]) / np.linalg.norm([0.707, 0.707])
     measurement11 = np.hstack([transform_plane_to_local(init_pose, plane1), 0, 0])
     measurement12 = np.hstack([transform_plane_to_local(init_pose, plane2), 1, 0])
     measurement21 = np.hstack([transform_plane_to_local(x1, plane1), 0, 1])
     measurement22 = np.hstack([transform_plane_to_local(x1, plane2), 1, 1])
     landmark_measurements = np.vstack([measurement11, measurement12, measurement21, measurement22])
 
-    # obj.add_landmark_measurement(landmark_measurements[:2, :])
+    obj.add_landmark_measurement(landmark_measurements[:2, :])
 
     print(obj.s_l)
     print(obj.landmarks)
@@ -184,8 +183,10 @@ if __name__ == "__main__":
     print(obj.s_x)
     print(obj.s_l)
     print(obj.landmarks)
-
-    obj.solve()
+    A, b = obj.generateAB(obj.s_x, obj.s_l)
+    #print(b)
+    import pdb; pdb.set_trace()
+    #obj.solve()
     print(obj.s_x)
     print(obj.s_l)
- 
+
