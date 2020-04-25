@@ -6,6 +6,7 @@ import scipy.linalg
 import pandas as pd
 import pdb
 from optimizers import gauss_newton, lm
+import time
 
 # TODO:
 # programatically create A and b (pipeline)
@@ -61,12 +62,16 @@ def main():
 
     #s = np.vstack([s_x1, s_l])
     #print(s)
-
+    t1 = time.time()
     A, b = generateAB(s_x, s_l, odom1.reshape(1, 3), landmark_measurements, std_x, std_l)
+    print("Good method", time.time()-t1)
+
     np.save('A', A)
     np.save('b', b)
+    t1 = time.time()
     A_hard,b_hard = hardcode_generateAB(s_x1, s_l1, odom1, landmark_measurements1, std_x, std_l)
     #print(A.shape, b.shape, s.shape)
+    print("Bad method", time.time()-t1)
 
     err_A = A_hard - A
     err_b = b_hard - b

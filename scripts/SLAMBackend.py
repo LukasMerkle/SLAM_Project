@@ -100,7 +100,7 @@ class SLAMBackend:
         p_landmark = np.vstack(p_landmark).reshape(-1,1)
 
         m_landmark = np.vstack(self.landmarks)[:, :-2].reshape(-1, 1)
-        std_l_repeated = np.tile(std_l, num_l_measurements)
+        std_l_repeated = np.tile(self.std_l, num_l_measurements)
         b_landmark = (m_landmark - p_landmark) / np.sqrt(std_l_repeated.reshape(-1, 1))
 
         A = np.vstack([A_odom, A_landmark])
@@ -168,13 +168,13 @@ if __name__ == "__main__":
 
     plane1 = np.array([0.707, 0.707, 0, 5])
     plane2 = np.array([-0.707, 0.707, 0, 2])
-    measurement11 = np.hstack([transform_plane_to_local(init_pose, plane1) , 0, 0])
+    measurement11 = np.hstack([transform_plane_to_local(init_pose, plane1), 0, 0])
     measurement12 = np.hstack([transform_plane_to_local(init_pose, plane2), 1, 0])
-    measurement21 = np.hstack([transform_plane_to_local(x1, plane1) , 0, 1])
+    measurement21 = np.hstack([transform_plane_to_local(x1, plane1), 0, 1])
     measurement22 = np.hstack([transform_plane_to_local(x1, plane2), 1, 1])
     landmark_measurements = np.vstack([measurement11, measurement12, measurement21, measurement22])
 
-    obj.add_landmark_measurement(landmark_measurements[:2, :])
+    # obj.add_landmark_measurement(landmark_measurements[:2, :])
 
     print(obj.s_l)
     print(obj.landmarks)
