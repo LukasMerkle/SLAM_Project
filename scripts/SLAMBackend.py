@@ -136,7 +136,7 @@ class SLAMBackend:
 
     #-> appends to odom_list, initalize new pose in s_x
     def add_pose_measurement(self, odom_measurement):
-        self.s_x = np.vstack([self.s_x, self.s_x[-1] + odom_measurement])
+        self.s_x = np.vstack([self.s_x, self.odom_model(self.s_x[-1],odom_measurement)])
         self.odom.append(odom_measurement)
 
     #-> appends to landmark_measurements, initializes new landmark in self.s_l

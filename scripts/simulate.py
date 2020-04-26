@@ -13,7 +13,7 @@ def measurement_noise(std):
 
 def add_plane_noise(planes, std):
     normalized_planes = normalize_planes((planes + measurement_noise(std)).reshape(1, -1))
-    return normalized_planes.reshape(-1, )
+    return normalized_planes.reshape(-1,)
 
 def compute_world_pose(pos1, pos2):
     H1 = computeH(pos1)
@@ -50,7 +50,7 @@ if __name__ == "__main__":
 
 
     std_x = np.array([0.3, 0.3, .01]) # x, y, theta
-    std_l = np.array([0.01, 0.01, 0.01, 0.005]) # nx, ny, nz, d
+    std_l = np.array([0.1, 0.1, 0.1, 0.005]) # nx, ny, nz, d
     std_p = np.array([0.05, 0.05, 0.001])
 
     plane1 = np.array([0.707, 0.707, 0, 5])
@@ -75,22 +75,23 @@ if __name__ == "__main__":
                                                       add_plane_noise(plane, std_l)), i, j])
                                                       for j, plane in enumerate(planes_gt)])
 
-        if count == 2:
+        if count == 5:
             n +=1
-            count =0
-        obj.add_landmark_measurement(landmark_measurements[n:n+5,:])
+            count=0
+        obj.add_landmark_measurement(landmark_measurements[n*5:(n+1)*5,:])
         count +=1
         # import pdb; pdb.set_trace()
         obj.solve()
 
-    # show_trajectory(x, obj.s_x, gt)
-                            #    obj.s_l, planes_gt, np.ones(num_planes))
+    show_trajectory(x, obj.s_x, gt)
+    #obj.s_l,  planes_gt[:15,:], np.ones(planes_gt[:15,:].shape[0]))
                             
-    plt.figure()
-    plt.plot(x[:,0], x[:,1], label= "Odometry")
-    plt.plot(obj.s_x[:,0], obj.s_x[:,1], label="Corrected")
-    plt.plot(obj.s_x[10,0], obj.s_x[10,1], 'ro')
-    plt.plot(gt[:,0], gt[:,1], label="Ground Truth")
-    plt.show()
+    # plt.figure()
+    # plt.plot(x[:,0], x[:,1], label= "Odometry")
+    # plt.plot(obj.s_x[:,0], obj.s_x[:,1], label="Corrected")
+    # plt.plot(obj.s_x[10,0], obj.s_x[10,1], 'ro')
+    # plt.plot(gt[:,0], gt[:,1], label="Ground Truth")
+    # plt.legend()
+    # plt.show()
 
 

@@ -28,9 +28,6 @@ if __name__ == "__main__":
 
     gt_dic = np.load('ground_truth.npz')
     gt = gt_dic['gt_trajectory']
-    print(odom_list)
-    import pdb; pdb.set_trace()
-    print(all_planes[:5, :].astype(int))
     obj = SLAMBackend(std_p, std_x, std_l, init_pose)
 
 
@@ -39,30 +36,32 @@ if __name__ == "__main__":
         pure_odometry.append(compute_world_pose(pure_odometry[-1], odom))
     pure_odometry = np.vstack([pure_odometry])
 
-    np.save('pure_odometry', pure_odometry)
+    # np.save('pure_odometry', pure_odometry)
 
-    for i,odom in enumerate(odom_list):
-        if (i % 10 == 0):
-            print("Iteration:", i)
-        if (i == 150):
-            break
-        obj.add_pose_measurement(odom)
+    # for i,odom in enumerate(odom_list):
+    #     if (i % 10 == 0):
+    #         print("Iteration:", i)
+    #     if (i == 150):
+    #         break
+    #     obj.add_pose_measurement(odom)
 
-        # see all planes always
-        current_plane_inds = np.where(all_planes[:, obj.P_IDX] == i)[0]
-        landmark_measurements = all_planes[current_plane_inds,:]
+    #     # see all planes always
+    #     current_plane_inds = np.where(all_planes[:, obj.P_IDX] == i)[0]
+    #     landmark_measurements = all_planes[current_plane_inds,:]
 
-        obj.add_landmark_measurement(landmark_measurements)
-        obj.solve()
+    #     obj.add_landmark_measurement(landmark_measurements)
+    #     obj.solve()
 
-    np.save('corrected', obj.s_x)
+    # np.save('corrected', obj.s_x)
     s_x = np.load('corrected.npy')
 
     # show_trajectory(np.cumsum(odom_list[:40], axis=0), obj.s_x, odom_list[:40])
     plt.figure()
+    plt.gca().set_aspect('equal')
     plt.plot(pure_odometry[:,0], pure_odometry[:,1], label= "Odometry")
     plt.plot(s_x[:,0], s_x[:,1], label="Corrected")
-    plt.plot(gt[:150,0], gt[:150,1], label="Ground Truth")
+    plt.plot(gt[:500,0], gt[:500,1], label="Ground Truth")
+    plt.legend()
     plt.show()
 
 
