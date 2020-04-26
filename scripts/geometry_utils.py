@@ -18,6 +18,14 @@ def transform_plane_to_world(pose_w, planes):
     d_w = (-np.dot(n_w, h) + planes[:,3].reshape(-1,1))
     return np.hstack([n_w,d_w])
 
+def computeH(pos):
+    x, y, t = pos
+    H = np.eye(3)
+    H[:2,:2] = rot2D(t)
+    H[0,-1] = x
+    H[1,-1] = y
+    return H
+    
 def transform_plane_to_local(pose_w, plane_w):
     n_w = plane_w[:3].reshape(-1,1)
     d_w = plane_w[-1]

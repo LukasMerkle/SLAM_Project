@@ -1,12 +1,15 @@
 # from optimizers import lm, gaussnewton
 import numpy as np
-from geometry_utils import transform_plane_to_world, transform_plane_to_local, rot3D
+from geometry_utils import transform_plane_to_world, transform_plane_to_local, rot3D, computeH
 import copy
 import scipy.linalg
+import math
+from scipy import sparse
+import scipy.sparse.linalg
 
 class SLAMBackend:
-    L_IDX = 4
-    P_IDX = 5
+    L_IDX = 5
+    P_IDX = 4
     dim_x = 3
     dim_l = 4
     def __init__(self, std_p, std_x, std_l, init_pose):
@@ -22,19 +25,16 @@ class SLAMBackend:
         return transform_plane_to_local(pose_w, planes)
 
     def odom_model(self, pos1, pos2):
-        return pos2-pos1
+        H1 = computeH(pos1)
+        H2 = computeH(pos2)
+        H = np.dot(np.linalg.inv(H1), H2)
+        t = math.atan2(H[1,0], H[0,0])
+        x = H[0,-1]
+        y = H[1,-1]
+        return np.array([x,y,t])
 
     def odom_jacobian(self, pos1, pos2):
-        x1, y1, t1 = pos1
-        x2, y2, t2 = pos2
-        H = np.zeros((3,6))
-        H[0,0] = -1
-        H[0,3] = 1
-        H[1,1] = -1
-        H[1,4] = 1
-        H[2,2] = -1
-        H[2,5] = 1
-        return H
+        return self.numeraical_jacobian(pos1, pos2, self.odom_model)
 
     def numeraical_jacobian(self, pos1, pos2, model):
         eps = 1e-12
@@ -112,19 +112,25 @@ class SLAMBackend:
 
         for i in range(max_iter):
             A,b = self.generateAB(s_x, s_l)
+            # A = sparse.csr_matrix(A)
+            # b = sparse.csr_matrix(b)
             if(i == 1):
-                print("START ERROR: ", np.linalg.norm(b))
+                # print("START ERROR: ", np.linalg.norm(b))
+                pass
             dx = scipy.linalg.solve(np.dot(A.T,A),np.dot(A.T,b))
+            # import pdb; pdb.set_trace()
+            # dx = scipy.sparse.linalg.spsolve(sparse.csc_matrix.dot(A, A.T), sparse.csc_matrix.dot(A.T, b.T), "COLAMD") 
+
             s_x_new = s_x + dx[:(len(self.odom) + 1) * 3].reshape(-1, self.dim_x) # dim_x
             s_l_new = s_l + dx[(len(self.odom) + 1) * 3:].reshape(-1, self.dim_l) # dim_l
             _,b_new = self.generateAB(s_x_new, s_l_new)
             if(np.linalg.norm(b_new) > np.linalg.norm(b)):
-                print("Error going up - breaking", i)
+                # print("Error going up - breaking", i)
                 return s_x, s_l, np.linalg.norm(b)
             s_x = s_x_new
             s_l = s_l_new
             if(np.linalg.norm(b_new - b) < 1e-12):
-                print("Converged",i)
+                # print("Converged",i)
                 break
         return s_x, s_l, np.linalg.norm(b_new)
 
@@ -138,9 +144,9 @@ class SLAMBackend:
     # assumes landmarks have normalized n's because of prediction - measurement calculation
     def add_landmark_measurement(self, landmark_measurement):
         if self.s_l is not None:
-            new_indices = landmark_measurement[np.where(landmark_measurement[:,self.L_IDX] >= self.s_l.shape[0])[0], self.L_IDX]
+            new_indices = landmark_measurement[np.where(landmark_measurement[:,self.L_IDX] >= self.s_l.shape[0])[0], self.L_IDX].astype(int)
             if new_indices.shape[0] > 0:
-                new_measurements = landmark_measurement[np.sort(new_indices),:] #sorting new indices by index
+                new_measurements = landmark_measurement[np.argsort(new_indices),:] #sorting new indices by index
                 self.s_l = np.vstack([self.s_l, transform_plane_to_world(self.s_x[-1],new_measurements)])
         else:
             self.s_l = transform_plane_to_world(self.s_x[-1],landmark_measurement)
@@ -185,8 +191,8 @@ if __name__ == "__main__":
     print(obj.landmarks)
     A, b = obj.generateAB(obj.s_x, obj.s_l)
     #print(b)
-    import pdb; pdb.set_trace()
-    #obj.solve()
+    # import pdb; pdb.set_trace()
+    obj.solve()
     print(obj.s_x)
     print(obj.s_l)
 
