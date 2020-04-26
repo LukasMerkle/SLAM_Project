@@ -1,6 +1,7 @@
 # from optimizers import lm, gaussnewton
 import numpy as np
-from geometry_utils import transform_plane_to_world, transform_plane_to_local, rot3D, computeH
+from geometry_utils import transform_plane_to_world, transform_plane_to_local, \
+                           compute_world_pose, rot3D, computeH
 import copy
 import scipy.linalg
 import math
@@ -136,7 +137,7 @@ class SLAMBackend:
 
     #-> appends to odom_list, initalize new pose in s_x
     def add_pose_measurement(self, odom_measurement):
-        self.s_x = np.vstack([self.s_x, self.odom_model(self.s_x[-1],odom_measurement)])
+        self.s_x = np.vstack([self.s_x, compute_world_pose(self.s_x[-1],odom_measurement)])
         self.odom.append(odom_measurement)
 
     #-> appends to landmark_measurements, initializes new landmark in self.s_l

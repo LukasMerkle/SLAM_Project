@@ -38,21 +38,21 @@ if __name__ == "__main__":
 
     # np.save('pure_odometry', pure_odometry)
 
-    # for i,odom in enumerate(odom_list):
-    #     if (i % 10 == 0):
-    #         print("Iteration:", i)
-    #     if (i == 150):
-    #         break
-    #     obj.add_pose_measurement(odom)
+    for i,odom in enumerate(odom_list):
+        if (i % 10 == 0):
+            print("Iteration:", i)
+        if (i == 150):
+            break
+        obj.add_pose_measurement(odom)
 
-    #     # see all planes always
-    #     current_plane_inds = np.where(all_planes[:, obj.P_IDX] == i)[0]
-    #     landmark_measurements = all_planes[current_plane_inds,:]
+        # see all planes always
+        current_plane_inds = np.where(all_planes[:, obj.P_IDX] == i)[0]
+        landmark_measurements = all_planes[current_plane_inds,:]
 
-    #     obj.add_landmark_measurement(landmark_measurements)
-    #     obj.solve()
+        obj.add_landmark_measurement(landmark_measurements)
+        obj.solve()
 
-    # np.save('corrected', obj.s_x)
+    np.save('corrected', obj.s_x)
     s_x = np.load('corrected.npy')
 
     # show_trajectory(np.cumsum(odom_list[:40], axis=0), obj.s_x, odom_list[:40])

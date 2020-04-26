@@ -26,6 +26,17 @@ def computeH(pos):
     H[1,-1] = y
     return H
 
+
+def compute_world_pose(pos1, odom):
+    H1 = computeH(pos1)
+    H2 = computeH(odom)
+    H = np.dot(H1, H2)
+    t = math.atan2(H[1,0], H[0,0])
+    x = H[0,-1]
+    y = H[1,-1]
+    return np.array([x,y,t])
+
+    
 def transform_plane_to_local(pose_w, plane_w):
     n_w = plane_w[:3].reshape(-1,1)
     d_w = plane_w[-1]
