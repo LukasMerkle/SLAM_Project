@@ -25,7 +25,7 @@ def computeH(pos):
     H[0,-1] = x
     H[1,-1] = y
     return H
-    
+
 def transform_plane_to_local(pose_w, plane_w):
     n_w = plane_w[:3].reshape(-1,1)
     d_w = plane_w[-1]
@@ -37,3 +37,20 @@ def transform_plane_to_local(pose_w, plane_w):
 
 def normalize_planes(planes):
     return planes[:, :4] / np.linalg.norm(planes[:,:3], axis=1).reshape(-1, 1)
+
+def midpoint(pt1, pt2):
+    return (pt2 + pt1) / 2
+
+def length_line(pt1, pt2):
+    return np.linalg.norm(pt2 - pt1)
+
+def parametric_line(pt1, pt2):
+    pt1_h = np.hstack([pt1, 1])
+    pt2_h = np.hstack([pt2, 1])
+    line = np.cross(pt1_h, pt2_h)
+    return line / np.linalg.norm(line[:2])
+
+
+def plane_from_line(line, nz=5):
+    nx, ny, d = line
+    return np.array([nx, ny, nz, d])
