@@ -26,10 +26,12 @@ def compute_world_pose(pos1, pos2):
 
 
 if __name__ == "__main__":
+    np.random.seed(0)
+
     num_poses = 15
     odom_list = np.zeros((num_poses, 3))
     odom_list[:, :2] = 1
-    odom_list[:,-1] = np.deg2rad(30)
+    odom_list[:,-1] = np.deg2rad(10)
     init_pose = np.array([0,0,0])
 
     gt_odom = copy.deepcopy(odom_list)
@@ -54,10 +56,15 @@ if __name__ == "__main__":
     plane1 = np.array([0.707, 0.707, 0, 5])
     plane2 = np.array([-0.707, 0.707, 0, 2])
     plane3 = np.array([2, 1, 0, 2])
-    planes_gt = normalize_planes(np.vstack([plane1, plane2, plane3]))
+    # planes_gt = normalize_planes(np.vstack([plane1, plane2, plane3]))
 
+    num_planes = 20
+    planes_gt = normalize_planes(np.hstack([np.random.randint(2, 10, (num_planes,2)), np.zeros((num_planes, 1)), np.random.randint(50, 100, (num_planes,1))]))
+    print(planes_gt)
     obj = SLAMBackend(std_p, std_x, std_l, init_pose)
 
+    plane_map = {i:-1 for i in range(num_planes)}
+    seen = 0
     for i,odom in enumerate(odom_list):
         print("Iteration:", i)
         obj.add_pose_measurement(odom)
@@ -66,12 +73,24 @@ if __name__ == "__main__":
         landmark_measurements = np.vstack([np.hstack([transform_plane_to_local(gt[i],
                                                       add_plane_noise(plane, std_l)), i, j])
                                                       for j, plane in enumerate(planes_gt)])
+        num_obs = np.random.randint(3, 15, 1)
+        selected_planes = np.random.choice(np.arange(0,20), num_obs)
+        mapped_planes = []
+        for s in selected_planes:
+            if plane_map[s] == -1:
+                plane_map[s] = seen
+                mapped_planes.append(seen)
+                seen+=1
+            else:
+                mapped_planes.append(plane_map[s])
 
-        obj.add_landmark_measurement(landmark_measurements)
+        # print(landmark_measurements[mapped_planes,:])
+        obj.add_landmark_measurement(landmark_measurements[mapped_planes,:])
+        # import pdb; pdb.set_trace()
         obj.solve()
 
-    show_trajectory_and_planes(x, obj.s_x, gt,
-                               obj.s_l, planes_gt, np.array([1, 3, 5]))
+    show_trajectory(x, obj.s_x, gt)
+                            #    obj.s_l, planes_gt, np.ones(num_planes))
     # plt.figure()
     # plt.plot(x[:,0], x[:,1], label= "Odometry")
     # plt.plot(obj.s_x[:,0], obj.s_x[:,1], label="Corrected")

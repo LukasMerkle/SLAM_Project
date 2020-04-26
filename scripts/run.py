@@ -28,9 +28,11 @@ if __name__ == "__main__":
 
     gt_dic = np.load('ground_truth.npz')
     gt = gt_dic['gt_trajectory']
-
+    print(odom_list)
+    exit()
     print(all_planes[:5, :].astype(int))
     obj = SLAMBackend(std_p, std_x, std_l, init_pose)
+
 
     pure_odometry = [init_pose]
     for i,odom in enumerate(odom_list):
@@ -42,7 +44,8 @@ if __name__ == "__main__":
     for i,odom in enumerate(odom_list):
         if (i % 10 == 0):
             print("Iteration:", i)
-            
+        if (i == 150):
+            break
         obj.add_pose_measurement(odom)
 
         # see all planes always
@@ -53,13 +56,13 @@ if __name__ == "__main__":
         obj.solve()
 
     np.save('corrected', obj.s_x)
-    s_x = np.load('corrected1.npy')
+    s_x = np.load('corrected.npy')
 
     # show_trajectory(np.cumsum(odom_list[:40], axis=0), obj.s_x, odom_list[:40])
     plt.figure()
     plt.plot(pure_odometry[:,0], pure_odometry[:,1], label= "Odometry")
     plt.plot(s_x[:,0], s_x[:,1], label="Corrected")
-    plt.plot(gt[:100,0], gt[:100,1], label="Ground Truth")
+    plt.plot(gt[:150,0], gt[:150,1], label="Ground Truth")
     plt.show()
 
 

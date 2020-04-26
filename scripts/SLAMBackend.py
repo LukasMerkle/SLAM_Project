@@ -112,18 +112,18 @@ class SLAMBackend:
 
         for i in range(max_iter):
             A,b = self.generateAB(s_x, s_l)
-            # A = sparse.csr_matrix(A)
-            # b = sparse.csr_matrix(b)
+            A = sparse.csr_matrix(A)
+            b = sparse.csr_matrix(b)
             if(i == 1):
                 # print("START ERROR: ", np.linalg.norm(b))
                 pass
-            dx = scipy.linalg.solve(np.dot(A.T,A),np.dot(A.T,b))
+            # dx = scipy.linalg.solve(np.dot(A.T,A),np.dot(A.T,b))
             # import pdb; pdb.set_trace()
-            # dx = scipy.sparse.linalg.spsolve(sparse.csc_matrix.dot(A, A.T), sparse.csc_matrix.dot(A.T, b.T), "COLAMD") 
-
+            dx = scipy.sparse.linalg.spsolve(sparse.csc_matrix.dot(A.T, A), sparse.csc_matrix.dot(A.T, b.T), "COLAMD")
             s_x_new = s_x + dx[:(len(self.odom) + 1) * 3].reshape(-1, self.dim_x) # dim_x
             s_l_new = s_l + dx[(len(self.odom) + 1) * 3:].reshape(-1, self.dim_l) # dim_l
             _,b_new = self.generateAB(s_x_new, s_l_new)
+            b = b.toarray()
             if(np.linalg.norm(b_new) > np.linalg.norm(b)):
                 # print("Error going up - breaking", i)
                 return s_x, s_l, np.linalg.norm(b)
