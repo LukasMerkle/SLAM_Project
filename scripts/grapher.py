@@ -6,6 +6,11 @@ import pdb;
 # Plotting does not show planes. Acts like matplotlib. Plotting just adds to graph
 # If you want to plot and show, run a function that starts with show
 
+def show_trajectory(traj):
+    plt.plot(traj[:, 0], traj[:, 1], ls='--')
+    plt.show()
+
+
 def plot_trajectories(odom, odom_corrected, ground_truth):
     plt.plot(odom[:, 0], odom[:, 1], ls='--', label="Odom ")
     plt.plot(odom_corrected[:, 0], odom_corrected[:, 1], ls='--', label="Odom Corrected")
