@@ -17,8 +17,8 @@ def compute_world_pose(pos1, pos2):
     return np.array([x,y,t])
 
 if __name__ == "__main__":
-    std_x = np.array([0.3, 0.3, 0.15]) # x, y, theta
-    std_l = np.array([0.1, 0.1, 0.1, 0.1]) # nx, ny, nz, d
+    std_x = np.array([0.05, 0.05, 1e-3]) # x, y, theta
+    std_l = np.array([1e-5, 1e-5, 1e-5, 0.05]) # nx, ny, nz, d
     std_p = np.array([0.05, 0.05, 0.001])
     init_pose = np.array([0,0,0])
 
@@ -28,9 +28,11 @@ if __name__ == "__main__":
 
     gt_dic = np.load('ground_truth.npz')
     gt = gt_dic['gt_trajectory']
-
+    print(odom_list)
+    import pdb; pdb.set_trace()
     print(all_planes[:5, :].astype(int))
     obj = SLAMBackend(std_p, std_x, std_l, init_pose)
+
 
     pure_odometry = [init_pose]
     for i,odom in enumerate(odom_list):
@@ -42,7 +44,8 @@ if __name__ == "__main__":
     for i,odom in enumerate(odom_list):
         if (i % 10 == 0):
             print("Iteration:", i)
-            
+        if (i == 150):
+            break
         obj.add_pose_measurement(odom)
 
         # see all planes always
@@ -53,13 +56,13 @@ if __name__ == "__main__":
         obj.solve()
 
     np.save('corrected', obj.s_x)
-    s_x = np.load('corrected1.npy')
+    s_x = np.load('corrected.npy')
 
     # show_trajectory(np.cumsum(odom_list[:40], axis=0), obj.s_x, odom_list[:40])
     plt.figure()
     plt.plot(pure_odometry[:,0], pure_odometry[:,1], label= "Odometry")
     plt.plot(s_x[:,0], s_x[:,1], label="Corrected")
-    plt.plot(gt[:100,0], gt[:100,1], label="Ground Truth")
+    plt.plot(gt[:150,0], gt[:150,1], label="Ground Truth")
     plt.show()
 
 

@@ -26,10 +26,12 @@ def compute_world_pose(pos1, pos2):
 
 
 if __name__ == "__main__":
+    np.random.seed(0)
+
     num_poses = 15
     odom_list = np.zeros((num_poses, 3))
     odom_list[:, :2] = 1
-    odom_list[:,-1] = np.deg2rad(30)
+    odom_list[:,-1] = np.deg2rad(10)
     init_pose = np.array([0,0,0])
 
     gt_odom = copy.deepcopy(odom_list)
@@ -47,17 +49,23 @@ if __name__ == "__main__":
     x = np.vstack([x])
 
 
-    std_x = np.array([0.3, 0.3, .1]) # x, y, theta
+    std_x = np.array([0.3, 0.3, .01]) # x, y, theta
     std_l = np.array([0.01, 0.01, 0.01, 0.005]) # nx, ny, nz, d
     std_p = np.array([0.05, 0.05, 0.001])
 
     plane1 = np.array([0.707, 0.707, 0, 5])
     plane2 = np.array([-0.707, 0.707, 0, 2])
     plane3 = np.array([2, 1, 0, 2])
-    planes_gt = normalize_planes(np.vstack([plane1, plane2, plane3]))
+    # planes_gt = normalize_planes(np.vstack([plane1, plane2, plane3]))
 
+    num_planes = 20
+    planes_gt = normalize_planes(np.hstack([np.random.randint(2, 10, (num_planes,2)), np.zeros((num_planes, 1)), np.random.randint(50, 100, (num_planes,1))]))
+    print(planes_gt)
     obj = SLAMBackend(std_p, std_x, std_l, init_pose)
 
+    plane_map = {i:-1 for i in range(num_planes)}
+    count = 0
+    n = 0 
     for i,odom in enumerate(odom_list):
         print("Iteration:", i)
         obj.add_pose_measurement(odom)
@@ -67,15 +75,22 @@ if __name__ == "__main__":
                                                       add_plane_noise(plane, std_l)), i, j])
                                                       for j, plane in enumerate(planes_gt)])
 
-        obj.add_landmark_measurement(landmark_measurements)
+        if count == 2:
+            n +=1
+            count =0
+        obj.add_landmark_measurement(landmark_measurements[n:n+5,:])
+        count +=1
+        # import pdb; pdb.set_trace()
         obj.solve()
 
-    show_trajectory_and_planes(x, obj.s_x, gt,
-                               obj.s_l, planes_gt, np.array([1, 3, 5]))
-    # plt.figure()
-    # plt.plot(x[:,0], x[:,1], label= "Odometry")
-    # plt.plot(obj.s_x[:,0], obj.s_x[:,1], label="Corrected")
-    # plt.plot(gt[:,0], gt[:,1], label="Ground Truth")
-    # plt.show()
+    # show_trajectory(x, obj.s_x, gt)
+                            #    obj.s_l, planes_gt, np.ones(num_planes))
+                            
+    plt.figure()
+    plt.plot(x[:,0], x[:,1], label= "Odometry")
+    plt.plot(obj.s_x[:,0], obj.s_x[:,1], label="Corrected")
+    plt.plot(obj.s_x[10,0], obj.s_x[10,1], 'ro')
+    plt.plot(gt[:,0], gt[:,1], label="Ground Truth")
+    plt.show()
 
 
