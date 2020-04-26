@@ -17,8 +17,8 @@ def compute_world_pose(pos1, pos2):
     return np.array([x,y,t])
 
 if __name__ == "__main__":
-    std_x = np.array([0.3, 0.3, 0.15]) # x, y, theta
-    std_l = np.array([0.1, 0.1, 0.1, 0.1]) # nx, ny, nz, d
+    std_x = np.array([0.05, 0.05, 1e-3]) # x, y, theta
+    std_l = np.array([1e-5, 1e-5, 1e-5, 0.05]) # nx, ny, nz, d
     std_p = np.array([0.05, 0.05, 0.001])
     init_pose = np.array([0,0,0])
 
@@ -29,7 +29,7 @@ if __name__ == "__main__":
     gt_dic = np.load('ground_truth.npz')
     gt = gt_dic['gt_trajectory']
     print(odom_list)
-    exit()
+    import pdb; pdb.set_trace()
     print(all_planes[:5, :].astype(int))
     obj = SLAMBackend(std_p, std_x, std_l, init_pose)
 
