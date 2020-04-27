@@ -26,6 +26,8 @@ def computeH(pos):
     H[1,-1] = y
     return H
 
+def theta_to_normal(theta):
+    return np.hstack([np.cos(theta), np.sin(theta), np.zeros_like(theta)])
 
 def compute_world_pose(pos1, odom):
     H1 = computeH(pos1)
@@ -36,7 +38,7 @@ def compute_world_pose(pos1, odom):
     y = H[1,-1]
     return np.array([x,y,t])
 
-    
+
 def transform_plane_to_local(pose_w, plane_w):
     n_w = plane_w[:3].reshape(-1,1)
     d_w = plane_w[-1]

@@ -7,15 +7,6 @@ from grapher import show_trajectory
 import matplotlib.pyplot as plt
 import math
 
-def compute_world_pose(pos1, pos2):
-    H1 = computeH(pos1)
-    H2 = computeH(pos2)
-    H = np.dot(H1, H2)
-    t = math.atan2(H[1,0], H[0,0])
-    x = H[0,-1]
-    y = H[1,-1]
-    return np.array([x,y,t])
-
 if __name__ == "__main__":
     std_x = np.array([0.05, 0.05, 1e-3]) # x, y, theta
     std_l = np.array([1e-5, 1e-5, 1e-5, 0.05]) # nx, ny, nz, d

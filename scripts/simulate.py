@@ -68,16 +68,12 @@ if __name__ == "__main__":
         if count == 5:
             n +=1
             count=0
-        obj.add_landmark_measurement(landmark_measurements[n*5:(n+1)*5,:])
-        # obj.add_landmark_measurement(landmark_measurements)
+        # obj.add_landmark_measurement(landmark_measurements[n*5:(n+1)*5,:])
+        obj.add_landmark_measurement(landmark_measurements)
 
-        print(obj.s_l.shape)
         count +=1
         # import pdb; pdb.set_trace()
         obj.solve()
 
     show_trajectory(x, obj.s_x, gt)
     #obj.s_l,  planes_gt[:15,:], np.ones(planes_gt[:15,:].shape[0]))
-
-
-
