@@ -21,11 +21,13 @@ class SLAMBackend:
         self.std_p = std_p
         self.std_x = std_x
         self.std_l = std_l
+        self.init_pose = init_pose
 
     def landmark_model(self, pose_w, planes):
         return transform_plane_to_local(pose_w, planes)
 
-    def odom_model(self, pos1, pos2):
+    @staticmethod
+    def odom_model(pos1, pos2):
         H1 = computeH(pos1)
         H2 = computeH(pos2)
         H = np.dot(np.linalg.inv(H1), H2)
@@ -81,7 +83,7 @@ class SLAMBackend:
             p_odom.append(self.odom_model(s_x[i], s_x[i + 1]))
         A_odom = np.vstack(A_odom)
         p_odom = np.hstack(p_odom).reshape(-1,1)
-        m_odom = np.vstack([np.array([0,0,0]), self.odom]).reshape(-1,1)
+        m_odom = np.vstack([self.init_pose, self.odom]).reshape(-1,1)
         std_x_repeated = np.tile(self.std_x, num_poses - 1)
         b_odom = (m_odom - p_odom) / np.sqrt(np.hstack([self.std_p, std_x_repeated]).reshape(-1, 1))
 

@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pdb;
+import geometry_utils as geom
 
 # Notes to understand file:
 # Plotting does not show planes. Acts like matplotlib. Plotting just adds to graph
@@ -13,9 +14,9 @@ def show():
     plt.show()
 
 def plot_trajectories(odom, odom_corrected, ground_truth):
-    plt.plot(odom[:, 0], odom[:, 1], ls='--', label="Odom ")
-    plt.plot(odom_corrected[:, 0], odom_corrected[:, 1], ls='--', label="Odom Corrected")
-    plt.plot(ground_truth[:, 0], ground_truth[:, 1], ls='--', label="Odom Ground Truth")
+    plt.plot(odom[:, 0], odom[:, 1], ls='-', label="Odometry")
+    plt.plot(odom_corrected[:, 0], odom_corrected[:, 1], ls='-', label="Corrected Trajectory")
+    plt.plot(ground_truth[:, 0], ground_truth[:, 1], ls='--', label="Ground Truth Trajectory")
 
 def plot_lines(edge_pts1, edge_pts2, label, c):
     for i, (pt1, pt2) in enumerate(zip(edge_pts1, edge_pts2)):
@@ -34,10 +35,11 @@ def plot_one_set_planes(planes_p, midpoints, size, show=False):
 def plot_planes(planes_p, planes_gt, midpoints, size=2):
     # line from intesrsection of plane and z= 0 plane is composed of indices
     # 0, 1, 3. ax + by + c = 0
+    planes_p = geom.normalize_planes(planes_p)
     edge_pts1, edge_pts2 = find_line_segment_edge_points(planes_p[:,[0,1,3]], midpoints, size)
     plot_lines(edge_pts1, edge_pts2, "Planes Predicted", 'r')
     edge_pts1_gt, edge_pts2_gt = find_line_segment_edge_points(planes_gt[:,[0,1,3]], midpoints, size)
-    plot_lines(edge_pts1_gt, edge_pts2_gt, "Planes Ground Truth", 'b')
+    plot_lines(edge_pts1_gt, edge_pts2_gt, "Planes Ground Truth", 'k')
 
 def plot_lines_with_edges(edge_pts1, edge_pts2):
     plot_lines(edge_pts1, edge_pts2, 'r')
@@ -50,6 +52,7 @@ def plot_lines_with_edges(edge_pts1, edge_pts2):
     array2 = [[x_edge2_line1], y_edge2_line1], [x_edge2_line2], y_edge2_line2]...]
 '''
 # TODO: pass in actual center point, not just x__center
+# graph offset to show d
 def find_line_segment_edge_points(lines, center_pts, size):
     A = (lines[:, 0]).reshape(-1, 1)
     B = (lines[:, 1]).reshape(-1, 1)
@@ -73,19 +76,29 @@ def test_find_line_segment_edge_points():
     assert(np.all(np.equal(edge_pts2, true_edge_pts2)))
 
 def show_trajectory(odom, odom_corrected, odom_ground_truth):
+    plt.gca().set_aspect('equal')
     plot_trajectories(odom, odom_corrected, odom_ground_truth)
+    plt.xlabel("Position in x [m]")
+    plt.ylabel("Position in y [m]")
+
     plt.legend()
     plt.show()
 
 def show_planes(planes_p, planes_gt, midpoints):
+    plt.gca().set_aspect('equal')
     plot_planes(planes_p, planes_gt, midpoints)
+    plt.xlabel("Position in x [m]")
+    plt.ylabel("Position in y [m]")
     plt.legend()
     plt.show()
 
 def show_trajectory_and_planes(odom, odom_corrected, odom_ground_truth,
-                               planes_p, planes_gt, midpoints):
+                               planes_p, planes_gt, midpoints, size=2):
+    plt.gca().set_aspect('equal')
     plot_trajectories(odom, odom_corrected, odom_ground_truth)
-    plot_planes(planes_p, planes_gt, midpoints)
+    plot_planes(planes_p, planes_gt, midpoints, size)
+    plt.xlabel("Position in x [m]")
+    plt.ylabel("Position in y [m]")
     plt.legend()
     plt.show()
 
