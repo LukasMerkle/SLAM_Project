@@ -21,7 +21,7 @@ if __name__ == "__main__":
     num_poses = 15
     odom_list = np.zeros((num_poses, 3))
     odom_list[:, :2] = 1
-    odom_list[:,-1] = np.deg2rad(10)
+    odom_list[:,-1] = np.deg2rad(30)
     init_pose = np.array([0,0,0])
 
     gt_odom = copy.deepcopy(odom_list)
@@ -68,8 +68,9 @@ if __name__ == "__main__":
         if count == 5:
             n +=1
             count=0
-        obj.add_landmark_measurement(landmark_measurements[n*5:(n+1)*5,:])
-        # obj.add_landmark_measurement(landmark_measurements)
+        # obj.add_landmark_measurement(landmark_measurements[n:n+10,:])
+        # obj.add_landmark_measurement(landmark_measurements[n:(n+1)*5,:])
+        obj.add_landmark_measurement(landmark_measurements)
 
         print(obj.s_l.shape)
         count +=1

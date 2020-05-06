@@ -41,15 +41,14 @@ if __name__ == "__main__":
     for i,odom in enumerate(odom_list):
         if (i % 10 == 0):
             print("Iteration:", i)
-        if (i == 150):
-            break
+        # if (i == 150):
+        #     break
         obj.add_pose_measurement(odom)
 
-        # see all planes always
-        current_plane_inds = np.where(all_planes[:, obj.P_IDX] == i)[0]
-        landmark_measurements = all_planes[current_plane_inds,:]
-
-        obj.add_landmark_measurement(landmark_measurements)
+        if i==0:
+            current_plane_inds = np.where(all_planes[:, obj.P_IDX] == i)[0]
+            landmark_measurements = all_planes[current_plane_inds,:]
+            obj.add_landmark_measurement(landmark_measurements)
         obj.solve()
 
     np.save('corrected', obj.s_x)
@@ -60,7 +59,7 @@ if __name__ == "__main__":
     plt.gca().set_aspect('equal')
     plt.plot(pure_odometry[:,0], pure_odometry[:,1], label= "Odometry")
     plt.plot(s_x[:,0], s_x[:,1], label="Corrected")
-    plt.plot(gt[:500,0], gt[:500,1], label="Ground Truth")
+    plt.plot(gt[:150,0], gt[:150,1], label="Ground Truth")
     plt.legend()
     plt.show()
 
